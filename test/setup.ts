@@ -1,0 +1,9 @@
+process.env.NODE_ENV ??= 'test';
+process.env.PORT ??= '3000';
+process.env.DB_HOST ??= 'localhost';
+process.env.DB_PORT ??= '5432';
+process.env.DB_USERNAME ??= 'e_engineer';
+process.env.DB_PASSWORD ??= 'e_engineer';
+process.env.DB_DATABASE ??= 'e_engineer_test';
+process.env.DB_SYNCHRONIZE ??= 'false';
+process.env.DB_LOGGING ??= 'false';

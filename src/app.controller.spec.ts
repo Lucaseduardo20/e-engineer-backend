@@ -14,9 +14,12 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  describe('health', () => {
+    it('returns the backend health status', () => {
+      expect(appController.getHealth()).toEqual({
+        service: 'e-engineer-backend',
+        status: 'ok',
+      });
     });
   });
 });
