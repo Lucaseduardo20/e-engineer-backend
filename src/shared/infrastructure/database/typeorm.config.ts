@@ -13,6 +13,7 @@ export function createTypeOrmOptions(
     database: configService.getOrThrow<string>('DB_DATABASE'),
     autoLoadEntities: true,
     synchronize: configService.getOrThrow<boolean>('DB_SYNCHRONIZE'),
+    migrationsRun: configService.getOrThrow<boolean>('DB_MIGRATIONS_RUN'),
     logging: configService.getOrThrow<boolean>('DB_LOGGING'),
   };
 }

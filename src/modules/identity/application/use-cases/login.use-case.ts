@@ -41,6 +41,8 @@ export class LoginUseCase {
         user.organizationId.toString(),
       );
 
+      console.log(user);
+
       return Result.ok({
         token,
         user: {

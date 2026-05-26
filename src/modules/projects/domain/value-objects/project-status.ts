@@ -3,6 +3,11 @@ import { ValueObject } from '../../../../shared/domain/value-objects/value-objec
 export type ProjectStatusValue =
   | 'draft'
   | 'active'
+  | 'planning'
+  | 'in_progress'
+  | 'in_review'
+  | 'waiting_approval'
+  | 'overdue'
   | 'on_hold'
   | 'completed'
   | 'cancelled';
@@ -10,6 +15,11 @@ export type ProjectStatusValue =
 const allowedStatuses: ProjectStatusValue[] = [
   'draft',
   'active',
+  'planning',
+  'in_progress',
+  'in_review',
+  'waiting_approval',
+  'overdue',
   'on_hold',
   'completed',
   'cancelled',

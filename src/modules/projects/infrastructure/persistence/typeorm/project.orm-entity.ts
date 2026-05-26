@@ -7,9 +7,23 @@ export class ProjectOrmEntity extends TenantScopedOrmEntity {
   @Column({ type: 'varchar', length: 160 })
   name!: string;
 
+  @Column({ type: 'varchar', length: 160, nullable: true })
+  client!: string | null;
+
   @Column({ name: 'project_type', type: 'varchar', length: 120 })
   projectType!: string;
 
   @Column({ type: 'varchar', length: 40 })
   status!: ProjectStatusValue;
+
+  @Column({
+    name: 'responsible_name',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+  })
+  responsibleName!: string | null;
+
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  tags!: string[];
 }

@@ -20,6 +20,12 @@ class EnvironmentVariables {
   @Max(65535)
   PORT = 3000;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  APP_PORT = 3000;
+
   @IsString()
   @IsNotEmpty()
   DB_HOST!: string;
@@ -57,6 +63,10 @@ class EnvironmentVariables {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   DB_LOGGING = false;
+
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  DB_MIGRATIONS_RUN = false;
 }
 
 export function validateEnv(

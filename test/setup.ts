@@ -7,5 +7,6 @@ process.env.DB_PASSWORD ??= 'e_engineer';
 process.env.DB_DATABASE ??= 'e_engineer_test';
 process.env.DB_SYNCHRONIZE ??= 'false';
 process.env.DB_LOGGING ??= 'false';
+process.env.DB_MIGRATIONS_RUN ??= 'false';
 process.env.JWT_SECRET ??= 'test-secret-with-at-least-32-characters';
 process.env.JWT_EXPIRES_IN ??= '24h';
