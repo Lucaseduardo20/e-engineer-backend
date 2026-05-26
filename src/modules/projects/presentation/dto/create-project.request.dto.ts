@@ -1,9 +1,6 @@
-import { IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class CreateProjectRequestDto {
-  @IsUUID()
-  organizationId!: string;
-
   @IsString()
   @IsNotEmpty()
   @MaxLength(160)

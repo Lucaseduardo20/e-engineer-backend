@@ -42,6 +42,14 @@ class EnvironmentVariables {
   @IsNotEmpty()
   DB_DATABASE!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  JWT_SECRET!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_EXPIRES_IN = '24h';
+
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   DB_SYNCHRONIZE = false;
