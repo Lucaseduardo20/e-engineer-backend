@@ -16,6 +16,14 @@ export class JwtTokenService implements TokenService {
     return this.jwtService.sign(payload);
   }
 
+  refreshToken(token: string): string {
+    const payload = this.jwtService.verify<JwtPayload>(token, {
+      ignoreExpiration: true,
+    });
+
+    return this.generateToken(payload.sub, payload.organizationId);
+  }
+
   validateToken(token: string): JwtPayload {
     return this.jwtService.verify<JwtPayload>(token);
   }

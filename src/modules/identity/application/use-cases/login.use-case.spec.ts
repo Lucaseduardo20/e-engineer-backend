@@ -44,6 +44,7 @@ describe('LoginUseCase', () => {
     userRepository = new InMemoryUserRepository();
     tokenService = {
       generateToken: jest.fn().mockReturnValue('signed-token'),
+      refreshToken: jest.fn().mockReturnValue('refreshed-token'),
     };
     useCase = new LoginUseCase(userRepository, tokenService);
   });
@@ -73,7 +74,7 @@ describe('LoginUseCase', () => {
       user: {
         id: user.id,
         email: 'admin@company.com',
-        name: 'Admin User',
+        fullName: 'Admin User',
         organizationId,
       },
     });

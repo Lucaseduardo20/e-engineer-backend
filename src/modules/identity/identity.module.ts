@@ -8,6 +8,7 @@ import { SharedInfrastructureModule } from '../../shared/infrastructure/shared-i
 import { TOKEN_SERVICE } from './application/ports/token-service';
 import { CreateUserUseCase } from './application/use-cases/create-user.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
+import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { JwtStrategy } from './infrastructure/jwt/jwt.strategy';
 import { JwtTokenService } from './infrastructure/jwt/jwt-token.service';
@@ -40,6 +41,7 @@ import { AuthController } from './presentation/controllers/auth.controller';
   controllers: [AuthController],
   providers: [
     LoginUseCase,
+    RefreshTokenUseCase,
     CreateUserUseCase,
     JwtStrategy,
     {
