@@ -2,8 +2,10 @@ export class LoginResponseDto {
   token!: string;
   user!: {
     id: string;
+    fullName: string;
     email: string;
-    name: string;
+    avatarUrl?: string | null;
+    roles: string[];
     organizationId: string;
   };
 }

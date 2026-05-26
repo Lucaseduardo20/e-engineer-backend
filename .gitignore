@@ -1,6 +1,7 @@
 codex.md
 master.md
-
+/docs
+*/*/docs
 # compiled output
 /dist
 /node_modules

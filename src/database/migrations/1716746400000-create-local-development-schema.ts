@@ -15,13 +15,15 @@ export class CreateLocalDevelopmentSchema1716746400000 implements MigrationInter
       )
     `);
 
-    await queryRunner.query(`
+    await queryRunner.query(
+      `
       ALTER TABLE "users"
       ADD CONSTRAINT "fk_users_organization"
       FOREIGN KEY ("organization_id")
       REFERENCES "organizations"("id")
       ON DELETE RESTRICT
-    `);
+    `,
+    );
 
     await queryRunner.query(`
       CREATE TABLE "memberships" (

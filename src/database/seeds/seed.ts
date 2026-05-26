@@ -35,7 +35,7 @@ function slugify(value: string): string {
 }
 
 async function seedUsers(query: Query): Promise<void> {
-  const passwordHash = await bcrypt.hash('Lucas123@', 10);
+  const passwordHash = await bcrypt.hash('123123lucas', 10);
   const users = [
     {
       id: '6a8ef9d8-3c2d-4e6d-ae62-dbb9d87b1001',
@@ -627,7 +627,7 @@ async function main(): Promise<void> {
     });
 
     console.log('Database seed completed.');
-    console.log('Login: admin@engflow.local / 123456');
+    console.log('Login: admin@engflow.local / 123123lucas');
   } finally {
     await dataSource.destroy();
   }

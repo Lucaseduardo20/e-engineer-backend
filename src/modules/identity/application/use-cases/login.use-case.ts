@@ -41,14 +41,14 @@ export class LoginUseCase {
         user.organizationId.toString(),
       );
 
-      console.log(user);
-
       return Result.ok({
         token,
         user: {
           id: user.id,
+          fullName: user.name,
           email: user.email.toString(),
-          name: user.name,
+          avatarUrl: null,
+          roles: [],
           organizationId: user.organizationId.toString(),
         },
       });
