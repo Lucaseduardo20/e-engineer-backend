@@ -1,12 +1,27 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DeliverableQueryService } from './infrastructure/repositories/deliverable-query.service';
+import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
+import { CreateDeliverableUseCase } from './application/use-cases/create-deliverable.use-case';
+import { GetDeliverableUseCase } from './application/use-cases/get-deliverable.use-case';
+import { ListDeliverablesUseCase } from './application/use-cases/list-deliverables.use-case';
+import { UpdateDeliverableUseCase } from './application/use-cases/update-deliverable.use-case';
+import { DELIVERABLE_REPOSITORY } from './domain/repositories/deliverable.repository';
 import { DeliverableOrmEntity } from './infrastructure/persistence/typeorm/deliverable.orm-entity';
+import { TypeOrmDeliverableRepository } from './infrastructure/repositories/deliverable.repository';
 import { DeliverablesController } from './presentation/controllers/deliverables.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DeliverableOrmEntity])],
+  imports: [TypeOrmModule.forFeature([DeliverableOrmEntity, ProjectOrmEntity])],
   controllers: [DeliverablesController],
-  providers: [DeliverableQueryService],
+  providers: [
+    CreateDeliverableUseCase,
+    GetDeliverableUseCase,
+    ListDeliverablesUseCase,
+    UpdateDeliverableUseCase,
+    {
+      provide: DELIVERABLE_REPOSITORY,
+      useClass: TypeOrmDeliverableRepository,
+    },
+  ],
 })
 export class DeliverablesModule {}
