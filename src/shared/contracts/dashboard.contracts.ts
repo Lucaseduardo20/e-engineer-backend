@@ -66,9 +66,30 @@ export interface DocumentSummary {
   projectId: string;
   deliverableId?: string | null;
   title: string;
+  description?: string | null;
+  type: string;
   officialRevision?: string | null;
   status: string;
   updatedAt: string;
+  latestVersion?: DocumentVersion | null;
+  officialVersion?: DocumentVersion | null;
+}
+
+export interface DocumentVersion {
+  id: string;
+  documentId: string;
+  revision: string;
+  fileName: string;
+  filePath: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  isOfficial: boolean;
+  status: string;
+  notes?: string | null;
+}
+
+export interface DocumentDetail extends DocumentSummary {
+  versions: DocumentVersion[];
 }
 
 export interface ReviewSummary {
