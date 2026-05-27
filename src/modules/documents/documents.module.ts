@@ -1,15 +1,42 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DocumentQueryService } from './infrastructure/repositories/document-query.service';
+import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
+import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
+import { CreateDocumentUseCase } from './application/use-cases/create-document.use-case';
+import { DeleteDocumentUseCase } from './application/use-cases/delete-document.use-case';
+import { GetDocumentUseCase } from './application/use-cases/get-document.use-case';
+import { ListDocumentsUseCase } from './application/use-cases/list-documents.use-case';
+import { UpdateDocumentUseCase } from './application/use-cases/update-document.use-case';
+import { UploadDocumentVersionUseCase } from './application/use-cases/upload-document-version.use-case';
+import { DOCUMENT_REPOSITORY } from './domain/repositories/document.repository';
 import { DocumentOrmEntity } from './infrastructure/persistence/typeorm/document.orm-entity';
 import { DocumentVersionOrmEntity } from './infrastructure/persistence/typeorm/document-version.orm-entity';
+import { TypeOrmDocumentRepository } from './infrastructure/repositories/document.repository';
+import { S3StorageService } from './infrastructure/storage/s3-storage.service';
 import { DocumentsController } from './presentation/controllers/documents.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([DocumentOrmEntity, DocumentVersionOrmEntity]),
+    TypeOrmModule.forFeature([
+      DocumentOrmEntity,
+      DocumentVersionOrmEntity,
+      ProjectOrmEntity,
+      DeliverableOrmEntity,
+    ]),
   ],
   controllers: [DocumentsController],
-  providers: [DocumentQueryService],
+  providers: [
+    CreateDocumentUseCase,
+    ListDocumentsUseCase,
+    GetDocumentUseCase,
+    UpdateDocumentUseCase,
+    DeleteDocumentUseCase,
+    UploadDocumentVersionUseCase,
+    S3StorageService,
+    {
+      provide: DOCUMENT_REPOSITORY,
+      useClass: TypeOrmDocumentRepository,
+    },
+  ],
 })
 export class DocumentsModule {}
