@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './shared/infrastructure/filters/api-exception.filter';
+import { createGlobalValidationPipe } from './shared/presentation/create-global-validation-pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,12 +19,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-    }),
-  );
+  app.useGlobalPipes(createGlobalValidationPipe());
   app.useGlobalFilters(new ApiExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
