@@ -95,7 +95,17 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "modules/identity/**/*.(t|j)s",
+      "modules/projects/**/*.(t|j)s",
+      "shared/application/**/*.(t|j)s",
+      "shared/domain/**/*.(t|j)s",
+      "shared/infrastructure/filters/**/*.(t|j)s",
+      "shared/presentation/**/*.(t|j)s",
+      "!**/*.module.ts",
+      "!**/*.orm-entity.ts",
+      "!**/migrations/**",
+      "!**/*.dto.ts",
+      "!**/*.interface.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
