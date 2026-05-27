@@ -5,7 +5,10 @@ import { TypeOrmTenantScopedRepository } from '../../../../../shared/infrastruct
 import { OrganizationId } from '../../../../../shared/domain/value-objects/organization-id';
 import { UniqueEntityId } from '../../../../../shared/domain/value-objects/unique-entity-id';
 import { Project } from '../../../domain/entities/project';
-import { ProjectRepository } from '../../../domain/repositories/project.repository';
+import {
+  type ListProjectsParams,
+  ProjectRepository,
+} from '../../../domain/repositories/project.repository';
 import { ProjectMapper } from '../../mappers/project.mapper';
 import { ProjectOrmEntity } from './project.orm-entity';
 import type {
@@ -16,6 +19,14 @@ import {
   mapProjectStatus,
   progressFromStatus,
 } from '../../../../../shared/presentation/status-mappers';
+
+const projectStatusFilters: Record<ProjectContract['status'], string[]> = {
+  draft: ['draft', 'planning'],
+  active: ['active', 'in_progress', 'in_review', 'overdue'],
+  paused: ['on_hold', 'waiting_approval'],
+  completed: ['completed'],
+  archived: ['cancelled'],
+};
 
 @Injectable()
 export class TypeOrmProjectRepository
@@ -35,14 +46,31 @@ export class TypeOrmProjectRepository
 
   async list(
     organizationId: OrganizationId,
-    params: { page: number; pageSize: number },
+    params: ListProjectsParams,
   ): Promise<Paginated<ProjectContract>> {
-    const [items, total] = await this.repository.findAndCount({
-      where: { organizationId: organizationId.toString() },
-      order: { updatedAt: 'DESC', name: 'ASC' },
-      skip: (params.page - 1) * params.pageSize,
-      take: params.pageSize,
-    });
+    const query = this.repository
+      .createQueryBuilder('project')
+      .where('project.organizationId = :organizationId', {
+        organizationId: organizationId.toString(),
+      })
+      .orderBy('project.updatedAt', 'DESC')
+      .addOrderBy('project.name', 'ASC')
+      .skip((params.page - 1) * params.pageSize)
+      .take(params.pageSize);
+
+    if (params.name) {
+      query.andWhere('project.name ILIKE :name', {
+        name: `%${params.name}%`,
+      });
+    }
+
+    if (params.status) {
+      query.andWhere('project.status IN (:...statuses)', {
+        statuses: projectStatusFilters[params.status],
+      });
+    }
+
+    const [items, total] = await query.getManyAndCount();
 
     return {
       items: items.map((item) => this.toContract(item)),

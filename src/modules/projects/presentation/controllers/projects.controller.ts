@@ -22,7 +22,6 @@ import {
   ok,
   type ApiResponse,
 } from '../../../../shared/presentation/api-response';
-import { PaginationQueryDto } from '../../../../shared/presentation/pagination-query.dto';
 import type {
   Paginated,
   Project,
@@ -31,6 +30,7 @@ import { CreateProjectUseCase } from '../../application/use-cases/create-project
 import { GetProjectDetailUseCase } from '../../application/use-cases/get-project-detail.use-case';
 import { ListProjectsUseCase } from '../../application/use-cases/list-projects.use-case';
 import { CreateProjectRequestDto } from '../dto/create-project.request.dto';
+import { ListProjectsQueryDto } from '../dto/list-projects-query.dto';
 import { CreateProjectOutputDto } from '../../application/dto/create-project.dto';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
@@ -49,7 +49,7 @@ export class ProjectsController {
   @Get()
   @ApiOkResponse({ description: 'Lista paginada de projetos tecnicos.' })
   async list(
-    @Query() query: PaginationQueryDto,
+    @Query() query: ListProjectsQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ApiResponse<Paginated<Project>>> {
     return ok(
@@ -57,6 +57,8 @@ export class ProjectsController {
         organizationId: request.user.organizationId,
         page: query.page,
         pageSize: query.pageSize,
+        name: query.name,
+        status: query.status,
       }),
     );
   }

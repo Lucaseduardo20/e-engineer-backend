@@ -8,11 +8,18 @@ import type {
 
 export const PROJECT_REPOSITORY = Symbol('PROJECT_REPOSITORY');
 
+export interface ListProjectsParams {
+  page: number;
+  pageSize: number;
+  name?: string;
+  status?: ProjectContract['status'];
+}
+
 export interface ProjectRepository {
   save(project: Project): Promise<void>;
   list(
     organizationId: OrganizationId,
-    params: { page: number; pageSize: number },
+    params: ListProjectsParams,
   ): Promise<Paginated<ProjectContract>>;
   getById(
     projectId: UniqueEntityId,

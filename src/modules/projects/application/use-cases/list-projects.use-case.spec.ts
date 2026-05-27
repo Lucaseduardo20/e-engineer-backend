@@ -19,12 +19,14 @@ describe('ListProjectsUseCase', () => {
         organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
         page: 2,
         pageSize: 10,
+        name: ' ponte ',
+        status: 'active',
       }),
     ).resolves.toEqual({ items: [], total: 0, page: 2, pageSize: 10 });
 
     expect(repository.list).toHaveBeenCalledWith(
       OrganizationId.create('7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001'),
-      { page: 2, pageSize: 10 },
+      { page: 2, pageSize: 10, name: 'ponte', status: 'active' },
     );
   });
 });
