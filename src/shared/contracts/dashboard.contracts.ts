@@ -33,6 +33,23 @@ export interface Deliverable {
   description?: string;
   dueDate?: string;
   status: 'todo' | 'in_progress' | 'done' | 'blocked';
+  type:
+    | 'technical_survey'
+    | 'architectural_project'
+    | 'structural_project'
+    | 'electrical_project'
+    | 'hydraulic_project'
+    | 'drainage_project'
+    | 'paving_project'
+    | 'landscaping_project'
+    | 'lighting_project'
+    | 'descriptive_memorial'
+    | 'budget'
+    | 'schedule'
+    | 'art_rrt'
+    | 'photographic_report'
+    | 'technical_report'
+    | 'other';
   assignees: string[];
   attachments?: { url: string; name: string }[];
 }

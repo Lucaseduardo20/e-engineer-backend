@@ -34,6 +34,36 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+function deliverableTypeFromName(name: string): string {
+  const normalized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (normalized.includes('arquitetonico')) return 'architectural_project';
+  if (normalized.includes('estrutural')) return 'structural_project';
+  if (normalized.includes('eletrico')) return 'electrical_project';
+  if (normalized.includes('hidraulico')) return 'hydraulic_project';
+  if (normalized.includes('drenagem')) return 'drainage_project';
+  if (normalized.includes('pavimentacao') || normalized.includes('geometrico')) {
+    return 'paving_project';
+  }
+  if (normalized.includes('paisagistico')) return 'landscaping_project';
+  if (normalized.includes('iluminacao')) return 'lighting_project';
+  if (normalized.includes('memorial')) return 'descriptive_memorial';
+  if (normalized.includes('orcamento') || normalized.includes('orcamentaria')) {
+    return 'budget';
+  }
+  if (normalized.includes('cronograma')) return 'schedule';
+  if (normalized.includes('art') || normalized.includes('rrt')) return 'art_rrt';
+  if (normalized.includes('fotografico')) return 'photographic_report';
+  if (normalized.includes('levantamento') || normalized.includes('topografico')) {
+    return 'technical_survey';
+  }
+
+  return 'technical_report';
+}
+
 async function seedUsers(query: Query): Promise<void> {
   const passwordHash = await bcrypt.hash('123123lucas', 10);
   const users = [
@@ -274,15 +304,13 @@ async function seedTemplates(query: Query): Promise<void> {
   }
 }
 
-async function seedProjectsAndDeliverables(query: Query): Promise<void> {
-  const statuses = [
-    'pending',
-    'in_progress',
-    'in_review',
-    'approved',
-    'rejected',
-    'overdue',
-  ];
+  async function seedProjectsAndDeliverables(query: Query): Promise<void> {
+    const statuses = [
+      'todo',
+      'in_progress',
+      'done',
+      'blocked',
+    ];
 
   for (const project of projects) {
     await query(
@@ -325,15 +353,19 @@ async function seedProjectsAndDeliverables(query: Query): Promise<void> {
 
       await query(
         `
-          INSERT INTO deliverables (
-            id, organization_id, project_id, template_deliverable_id, name,
-            status, responsible_name, due_date, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())
+        INSERT INTO deliverables (
+          id, organization_id, project_id, template_deliverable_id, name,
+          description, status, type, responsible_name, assignees, due_date,
+          created_at, updated_at
+        )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, now(), now())
           ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
+            description = EXCLUDED.description,
             status = EXCLUDED.status,
+            type = EXCLUDED.type,
             responsible_name = EXCLUDED.responsible_name,
+            assignees = EXCLUDED.assignees,
             due_date = EXCLUDED.due_date,
             updated_at = now()
         `,
@@ -343,8 +375,11 @@ async function seedProjectsAndDeliverables(query: Query): Promise<void> {
           project.id,
           uuidFromText(`template-deliverable:${template.id}:${name}`),
           name,
+          `Entregavel tecnico de ${project.projectType} vinculado ao projeto ${project.name}.`,
           status,
+          deliverableTypeFromName(name),
           index % 2 === 0 ? project.responsible : 'Leonardo',
+          JSON.stringify([index % 2 === 0 ? project.responsible : 'Leonardo']),
           daysFromNow(index * 7 - 10),
         ],
       );
