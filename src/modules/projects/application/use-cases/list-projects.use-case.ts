@@ -5,6 +5,7 @@ import type {
   Project,
 } from '../../../../shared/contracts/dashboard.contracts';
 import {
+  type ListProjectsParams,
   PROJECT_REPOSITORY,
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
@@ -20,13 +21,19 @@ export class ListProjectsUseCase {
     organizationId: string;
     page: number;
     pageSize: number;
+    name?: string;
+    status?: Project['status'];
   }): Promise<Paginated<Project>> {
+    const params: ListProjectsParams = {
+      page: input.page,
+      pageSize: input.pageSize,
+      name: input.name?.trim() || undefined,
+      status: input.status,
+    };
+
     return this.projectRepository.list(
       OrganizationId.create(input.organizationId),
-      {
-        page: input.page,
-        pageSize: input.pageSize,
-      },
+      params,
     );
   }
 }

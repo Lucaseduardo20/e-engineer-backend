@@ -1,5 +1,11 @@
 import { randomUUID } from 'crypto';
 import { DomainEventPublisher } from '../../../../shared/application/ports/domain-event-publisher';
+import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
+import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
+import type {
+  Paginated,
+  Project as ProjectContract,
+} from '../../../../shared/contracts/dashboard.contracts';
 import { Project } from '../../domain/entities/project';
 import { ProjectRepository } from '../../domain/repositories/project.repository';
 import { CreateProjectUseCase } from './create-project.use-case';
@@ -13,6 +19,22 @@ class InMemoryProjectRepository implements ProjectRepository {
   }
 
   findById(): Promise<Project | null> {
+    return Promise.resolve(null);
+  }
+
+  list(): Promise<Paginated<ProjectContract>> {
+    return Promise.resolve({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    });
+  }
+
+  getById(
+    _projectId: UniqueEntityId,
+    _organizationId: OrganizationId,
+  ): Promise<ProjectContract | null> {
     return Promise.resolve(null);
   }
 }
