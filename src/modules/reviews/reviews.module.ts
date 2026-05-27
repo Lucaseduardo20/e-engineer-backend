@@ -1,12 +1,44 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ReviewQueryService } from './infrastructure/repositories/review-query.service';
+import { AuditModule } from '../audit/audit.module';
+import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
+import { DocumentVersionOrmEntity } from '../documents/infrastructure/persistence/typeorm/document-version.orm-entity';
+import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeorm/document.orm-entity';
+import { UserOrmEntity } from '../identity/infrastructure/persistence/typeorm/user.orm-entity';
+import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
+import { ApproveReviewUseCase } from './application/use-cases/approve-review.use-case';
+import { CreateReviewUseCase } from './application/use-cases/create-review.use-case';
+import { GetReviewUseCase } from './application/use-cases/get-review.use-case';
+import { ListReviewsUseCase } from './application/use-cases/list-reviews.use-case';
+import { RejectReviewUseCase } from './application/use-cases/reject-review.use-case';
+import { REVIEW_REPOSITORY } from './domain/repositories/review.repository';
 import { ReviewOrmEntity } from './infrastructure/persistence/typeorm/review.orm-entity';
+import { TypeOrmReviewRepository } from './infrastructure/repositories/review.repository';
 import { ReviewsController } from './presentation/controllers/reviews.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ReviewOrmEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      ReviewOrmEntity,
+      ProjectOrmEntity,
+      DeliverableOrmEntity,
+      DocumentOrmEntity,
+      DocumentVersionOrmEntity,
+      UserOrmEntity,
+    ]),
+    AuditModule,
+  ],
   controllers: [ReviewsController],
-  providers: [ReviewQueryService],
+  providers: [
+    CreateReviewUseCase,
+    ListReviewsUseCase,
+    GetReviewUseCase,
+    ApproveReviewUseCase,
+    RejectReviewUseCase,
+    {
+      provide: REVIEW_REPOSITORY,
+      useClass: TypeOrmReviewRepository,
+    },
+  ],
 })
 export class ReviewsModule {}

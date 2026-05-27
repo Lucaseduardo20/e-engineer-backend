@@ -96,11 +96,17 @@ export interface ReviewSummary {
   id: string;
   projectId: string;
   deliverableId?: string | null;
+  documentId?: string | null;
+  documentVersionId?: string | null;
   status: string;
   requestedBy: string;
+  reviewers: { userId: string; role: string }[];
   reviewedBy?: string | null;
+  reviewedAt?: string | null;
   dueDate?: string | null;
   comment?: string | null;
+  decisionComment?: string | null;
+  updatedAt?: string;
 }
 
 export interface AuditLogEntry {
@@ -122,4 +128,8 @@ export interface ApiError {
   code: string;
   message: string;
   details?: unknown;
+}
+
+export interface ReviewDetail extends ReviewSummary {
+  createdAt?: string;
 }
