@@ -1,4 +1,5 @@
 import type {
+  ReviewComment,
   ReviewDetail,
   ReviewSummary,
 } from '../../../../shared/contracts/dashboard.contracts';
@@ -22,4 +23,7 @@ export class ReviewSummaryResponseDto implements ReviewSummary {
 
 export class ReviewResponseDto
   extends ReviewSummaryResponseDto
-  implements ReviewDetail {}
+  implements ReviewDetail
+{
+  comments?: ReviewComment[];
+}

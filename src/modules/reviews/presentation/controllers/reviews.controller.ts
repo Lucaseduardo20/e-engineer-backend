@@ -21,6 +21,7 @@ import type {
   Paginated,
   ReviewDetail,
   ReviewSummary,
+  ReviewComment,
 } from '../../../../shared/contracts/dashboard.contracts';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import { JwtAuthGuard } from '../../../../shared/infrastructure/auth/jwt-auth.guard';
@@ -34,6 +35,8 @@ import { CreateReviewUseCase } from '../../application/use-cases/create-review.u
 import { GetReviewUseCase } from '../../application/use-cases/get-review.use-case';
 import { ListReviewsUseCase } from '../../application/use-cases/list-reviews.use-case';
 import { RejectReviewUseCase } from '../../application/use-cases/reject-review.use-case';
+import { AddReviewCommentUseCase } from '../../application/use-cases/add-review-comment.use-case';
+import { CreateReviewCommentDto } from '../dto/create-review-comment.dto';
 import { CreateReviewDto } from '../dto/create-review.dto';
 import { DecideReviewDto } from '../dto/decide-review.dto';
 import { ListReviewsQueryDto } from '../dto/list-reviews-query.dto';
@@ -50,6 +53,7 @@ export class ReviewsController {
     private readonly getReviewUseCase: GetReviewUseCase,
     private readonly approveReviewUseCase: ApproveReviewUseCase,
     private readonly rejectReviewUseCase: RejectReviewUseCase,
+    private readonly addReviewCommentUseCase: AddReviewCommentUseCase,
     private readonly audit: AuditQueryService,
   ) {}
 
@@ -171,6 +175,38 @@ export class ReviewsController {
     });
 
     return ok(review);
+  }
+
+  @Post(':id/comments')
+  @ApiCreatedResponse({ description: 'Comentario adicionado a revisao.' })
+  async addComment(
+    @Param('id') id: string,
+    @Body() body: CreateReviewCommentDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<ReviewComment>> {
+    const result = await this.addReviewCommentUseCase.execute({
+      organizationId: request.user.organizationId,
+      reviewId: id,
+      actorUserId: request.user.userId,
+      body: body.body,
+    });
+
+    if (result.isFail()) {
+      this.throwResultError(result.unwrapError());
+    }
+
+    const comment = result.unwrap();
+    await this.audit.record({
+      organizationId: request.user.organizationId,
+      actorName: request.user.userId,
+      action: 'review.comment.created',
+      entityType: 'review',
+      entityId: id,
+      description: 'Comentario registrado em revisao tecnica',
+      metadata: { commentId: comment.id },
+    });
+
+    return ok(comment);
   }
 
   private throwResultError(error: Error): never {

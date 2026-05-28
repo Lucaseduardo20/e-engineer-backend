@@ -109,6 +109,14 @@ export interface ReviewSummary {
   updatedAt?: string;
 }
 
+export interface ReviewComment {
+  id: string;
+  reviewId: string;
+  authorUserId: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   actorName: string;
@@ -132,4 +140,5 @@ export interface ApiError {
 
 export interface ReviewDetail extends ReviewSummary {
   createdAt?: string;
+  comments?: ReviewComment[];
 }

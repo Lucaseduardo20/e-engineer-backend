@@ -7,6 +7,7 @@ import { Result } from '../../../../shared/application/result/result';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 import { ApproveReviewUseCase } from '../../application/use-cases/approve-review.use-case';
+import { AddReviewCommentUseCase } from '../../application/use-cases/add-review-comment.use-case';
 import { CreateReviewUseCase } from '../../application/use-cases/create-review.use-case';
 import { GetReviewUseCase } from '../../application/use-cases/get-review.use-case';
 import { ListReviewsUseCase } from '../../application/use-cases/list-reviews.use-case';
@@ -46,6 +47,7 @@ describe('ReviewsController', () => {
   let getReviewUseCase: jest.Mocked<GetReviewUseCase>;
   let approveReviewUseCase: jest.Mocked<ApproveReviewUseCase>;
   let rejectReviewUseCase: jest.Mocked<RejectReviewUseCase>;
+  let addReviewCommentUseCase: jest.Mocked<AddReviewCommentUseCase>;
   let audit: jest.Mocked<AuditQueryService>;
   let controller: ReviewsController;
 
@@ -55,6 +57,7 @@ describe('ReviewsController', () => {
     getReviewUseCase = { execute: jest.fn() } as never;
     approveReviewUseCase = { execute: jest.fn() } as never;
     rejectReviewUseCase = { execute: jest.fn() } as never;
+    addReviewCommentUseCase = { execute: jest.fn() } as never;
     audit = { record: jest.fn() } as never;
     controller = new ReviewsController(
       createReviewUseCase,
@@ -62,6 +65,7 @@ describe('ReviewsController', () => {
       getReviewUseCase,
       approveReviewUseCase,
       rejectReviewUseCase,
+      addReviewCommentUseCase,
       audit,
     );
   });
@@ -170,5 +174,45 @@ describe('ReviewsController', () => {
         createRequest(),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('adds comments to reviews and records audit events', async () => {
+    addReviewCommentUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'comment-1',
+        reviewId: 'review-1',
+        authorUserId: 'user-1',
+        body: 'Detalhei a pendencia tecnica.',
+        createdAt: '2026-05-28T10:00:00.000Z',
+      }),
+    );
+
+    await expect(
+      controller.addComment(
+        'review-1',
+        { body: 'Detalhei a pendencia tecnica.' },
+        createRequest(),
+      ),
+    ).resolves.toEqual({
+      data: {
+        id: 'comment-1',
+        reviewId: 'review-1',
+        authorUserId: 'user-1',
+        body: 'Detalhei a pendencia tecnica.',
+        createdAt: '2026-05-28T10:00:00.000Z',
+      },
+    });
+    expect(addReviewCommentUseCase.execute).toHaveBeenCalledWith({
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      reviewId: 'review-1',
+      actorUserId: 'user-1',
+      body: 'Detalhei a pendencia tecnica.',
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'review.comment.created',
+        entityId: 'review-1',
+      }),
+    );
   });
 });

@@ -2,12 +2,14 @@ import { randomUUID } from 'crypto';
 import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
 import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
 import { Review } from '../../domain/entities/review';
+import { ReviewCommentRepository } from '../../domain/repositories/review-comment.repository';
 import { ReviewRepository } from '../../domain/repositories/review.repository';
 import { Reviewer } from '../../domain/value-objects/reviewer.vo';
 import { CreateReviewUseCase } from './create-review.use-case';
 import { ApproveReviewUseCase } from './approve-review.use-case';
 import { RejectReviewUseCase } from './reject-review.use-case';
 import { ListReviewsUseCase } from './list-reviews.use-case';
+import { AddReviewCommentUseCase } from './add-review-comment.use-case';
 
 function createRepository(): jest.Mocked<ReviewRepository> {
   return {
@@ -21,6 +23,13 @@ function createRepository(): jest.Mocked<ReviewRepository> {
     projectExists: jest.fn(),
     save: jest.fn(),
     usersExist: jest.fn(),
+  };
+}
+
+function createCommentRepository(): jest.Mocked<ReviewCommentRepository> {
+  return {
+    listByReview: jest.fn(),
+    save: jest.fn(),
   };
 }
 
@@ -76,6 +85,26 @@ describe('Reviews use cases', () => {
 
     expect(result.isFail()).toBe(true);
     expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('normalizes full ISO review due dates to the stored date value', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    repository.usersExist.mockResolvedValue(true);
+    const useCase = new CreateReviewUseCase(repository);
+    const reviewerId = randomUUID();
+
+    const result = await useCase.execute({
+      organizationId: randomUUID(),
+      projectId: randomUUID(),
+      requestedBy: 'requester-1',
+      reviewers: [reviewerId],
+      dueDate: '2026-06-10T03:00:00.000Z',
+      comment: 'Validar memorial.',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(result.unwrap().dueDate).toBe('2026-06-10');
   });
 
   it('lists reviews with tenant and entity filters', async () => {
@@ -154,5 +183,61 @@ describe('Reviews use cases', () => {
     });
 
     expect(blocked.isFail()).toBe(true);
+  });
+
+  it('allows involved users to comment on reviews', async () => {
+    const repository = createRepository();
+    const commentRepository = createCommentRepository();
+    const reviewerId = randomUUID();
+    const review = Review.create({
+      organizationId: OrganizationId.create(randomUUID()),
+      projectId: new UniqueEntityId(),
+      requestedBy: 'requester-1',
+      reviewers: [Reviewer.create(reviewerId)],
+      comment: 'Revisar memorial.',
+    });
+    repository.findById.mockResolvedValue(review);
+    repository.getMembershipRole.mockResolvedValue('member');
+    const useCase = new AddReviewCommentUseCase(repository, commentRepository);
+
+    const result = await useCase.execute({
+      organizationId: review.organizationId.toString(),
+      reviewId: review.id,
+      actorUserId: reviewerId,
+      body: 'Conferi a memoria de calculo e deixei uma observacao.',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(commentRepository.save).toHaveBeenCalled();
+    expect(result.unwrap()).toMatchObject({
+      reviewId: review.id,
+      authorUserId: reviewerId,
+      body: 'Conferi a memoria de calculo e deixei uma observacao.',
+    });
+  });
+
+  it('blocks unrelated users from commenting on reviews', async () => {
+    const repository = createRepository();
+    const commentRepository = createCommentRepository();
+    const review = Review.create({
+      organizationId: OrganizationId.create(randomUUID()),
+      projectId: new UniqueEntityId(),
+      requestedBy: 'requester-1',
+      reviewers: [Reviewer.create(randomUUID())],
+      comment: 'Revisar memorial.',
+    });
+    repository.findById.mockResolvedValue(review);
+    repository.getMembershipRole.mockResolvedValue('member');
+    const useCase = new AddReviewCommentUseCase(repository, commentRepository);
+
+    const result = await useCase.execute({
+      organizationId: review.organizationId.toString(),
+      reviewId: review.id,
+      actorUserId: randomUUID(),
+      body: 'Tentativa de comentario.',
+    });
+
+    expect(result.isFail()).toBe(true);
+    expect(commentRepository.save).not.toHaveBeenCalled();
   });
 });

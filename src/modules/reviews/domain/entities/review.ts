@@ -212,11 +212,19 @@ export class Review extends AggregateRoot<ReviewProps> {
       return null;
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+    const dateOnlyMatch = value.match(/^(\d{4}-\d{2}-\d{2})$/);
+
+    if (dateOnlyMatch && !Number.isNaN(Date.parse(value))) {
+      return dateOnlyMatch[1];
+    }
+
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
       throw new Error('Review due date must be a valid ISO date.');
     }
 
-    return value;
+    return parsed.toISOString().slice(0, 10);
   }
 
   private static normalizeOptionalText(value?: string | null): string | null {
