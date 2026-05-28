@@ -25,6 +25,17 @@ export class OrganizationMapper {
       parentId: null,
     };
   }
+
+  static toOrm(organization: Organization): OrganizationOrmEntity {
+    const ormEntity = new OrganizationOrmEntity();
+
+    ormEntity.id = organization.id;
+    ormEntity.name = organization.name.value;
+    ormEntity.legalName = organization.legalName;
+    ormEntity.logoUrl = organization.logoUrl;
+
+    return ormEntity;
+  }
 }
 
 export function slugify(value: string): string {

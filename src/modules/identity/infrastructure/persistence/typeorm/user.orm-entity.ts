@@ -13,6 +13,12 @@ export class UserOrmEntity extends TenantScopedOrmEntity {
   @Column({ type: 'varchar', length: 160 })
   name!: string;
 
+  @Column({ name: 'avatar_url', type: 'text', nullable: true })
+  avatarUrl!: string | null;
+
+  @Column({ name: 'is_platform_admin', type: 'boolean', default: false })
+  isPlatformAdmin!: boolean;
+
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   lastLoginAt!: Date | null;
 }

@@ -28,6 +28,20 @@ export class Organization extends AggregateRoot<OrganizationProps> {
     return new Organization(props, id);
   }
 
+  updateProfile(params: { name?: string; legalName?: string | null }): void {
+    if (params.name !== undefined) {
+      this.props.name = OrganizationName.create(params.name);
+    }
+
+    if (params.legalName !== undefined) {
+      this.props.legalName = normalizeLegalName(params.legalName);
+    }
+  }
+
+  updateLogo(logoUrl: string | null): void {
+    this.props.logoUrl = normalizeLogoUrl(logoUrl);
+  }
+
   get id(): string {
     return this.getId().toString();
   }
@@ -56,6 +70,20 @@ function normalizeLegalName(value?: string | null): string | null {
     throw new Error(
       'Organization legal name must have at most 180 characters.',
     );
+  }
+
+  return normalized;
+}
+
+function normalizeLogoUrl(value?: string | null): string | null {
+  const normalized = value?.trim() ?? '';
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length > 500) {
+    throw new Error('Organization logo URL must have at most 500 characters.');
   }
 
   return normalized;

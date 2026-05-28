@@ -10,6 +10,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { KnowledgeBaseModule } from './modules/knowledge-base/knowledge-base.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { PriorityRequestsModule } from './modules/priority-requests/priority-requests.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { validateEnv } from './shared/infrastructure/config/env.validation';
@@ -31,6 +32,7 @@ import { SharedInfrastructureModule } from './shared/infrastructure/shared-infra
     IdentityModule,
     OrganizationsModule,
     ProjectsModule,
+    PriorityRequestsModule,
     TemplatesModule,
     DeliverablesModule,
     DocumentsModule,

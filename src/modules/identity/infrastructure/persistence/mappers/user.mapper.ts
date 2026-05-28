@@ -13,6 +13,8 @@ export class UserMapper {
         email: Email.create(ormEntity.email),
         password: Password.fromHash(ormEntity.password),
         name: ormEntity.name,
+        avatarUrl: ormEntity.avatarUrl,
+        isPlatformAdmin: ormEntity.isPlatformAdmin,
         createdAt: ormEntity.createdAt,
         updatedAt: ormEntity.updatedAt,
         lastLoginAt: ormEntity.lastLoginAt,
@@ -29,6 +31,8 @@ export class UserMapper {
     ormEntity.email = user.email.toString();
     ormEntity.password = user.password.getHash();
     ormEntity.name = user.name;
+    ormEntity.avatarUrl = user.avatarUrl;
+    ormEntity.isPlatformAdmin = user.isPlatformAdmin;
     ormEntity.lastLoginAt = user.lastLoginAt ?? null;
 
     return ormEntity;

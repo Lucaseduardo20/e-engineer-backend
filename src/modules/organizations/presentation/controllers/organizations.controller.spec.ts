@@ -11,8 +11,26 @@ describe('OrganizationsController', () => {
     user: {
       userId: randomUUID(),
       organizationId,
+      roles: ['owner'],
+      isPlatformAdmin: false,
     },
   } as AuthenticatedRequest;
+
+  function makeController(overrides: {
+    getCurrent?: Partial<GetCurrentOrganizationUseCase>;
+    listUsers?: Partial<ListOrganizationUsersUseCase>;
+  }) {
+    return new OrganizationsController(
+      overrides.getCurrent as unknown as GetCurrentOrganizationUseCase,
+      overrides.listUsers as unknown as ListOrganizationUsersUseCase,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { execute: jest.fn() } as never,
+      { upload: jest.fn() } as never,
+    );
+  }
 
   it('returns the current organization from authenticated tenant', async () => {
     const getCurrent = {
@@ -26,10 +44,7 @@ describe('OrganizationsController', () => {
     const listUsers = {
       execute: jest.fn(),
     };
-    const controller = new OrganizationsController(
-      getCurrent as unknown as GetCurrentOrganizationUseCase,
-      listUsers as unknown as ListOrganizationUsersUseCase,
-    );
+    const controller = makeController({ getCurrent, listUsers });
 
     const response = await controller.current(request);
 
@@ -52,10 +67,7 @@ describe('OrganizationsController', () => {
         },
       ]),
     };
-    const controller = new OrganizationsController(
-      getCurrent as unknown as GetCurrentOrganizationUseCase,
-      listUsers as unknown as ListOrganizationUsersUseCase,
-    );
+    const controller = makeController({ getCurrent, listUsers });
 
     const response = await controller.users(request);
 
@@ -67,10 +79,10 @@ describe('OrganizationsController', () => {
   });
 
   it('raises not found when authenticated organization is missing', async () => {
-    const controller = new OrganizationsController(
-      { execute: jest.fn().mockResolvedValue(null) } as never,
-      { execute: jest.fn() } as never,
-    );
+    const controller = makeController({
+      getCurrent: { execute: jest.fn().mockResolvedValue(null) } as never,
+      listUsers: { execute: jest.fn() } as never,
+    });
 
     await expect(controller.current(request)).rejects.toBeInstanceOf(
       NotFoundException,

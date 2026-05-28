@@ -4,6 +4,9 @@ const allowedOrganizationRoles = [
   'owner',
   'admin',
   'manager',
+  'project_manager',
+  'estimator',
+  'finance',
   'member',
 ] as const;
 

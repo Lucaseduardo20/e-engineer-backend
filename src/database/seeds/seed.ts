@@ -72,18 +72,21 @@ async function seedUsers(query: Query): Promise<void> {
       name: 'Lucas Eduardo',
       email: 'admin@engflow.local',
       role: 'owner',
+      isPlatformAdmin: true,
     },
     {
       id: '6a8ef9d8-3c2d-4e6d-ae62-dbb9d87b1002',
       name: 'Leonardo',
       email: 'leonardo@engflow.local',
       role: 'admin',
+      isPlatformAdmin: false,
     },
     {
       id: '6a8ef9d8-3c2d-4e6d-ae62-dbb9d87b1003',
       name: 'Rafael',
       email: 'rafael@engflow.local',
       role: 'member',
+      isPlatformAdmin: false,
     },
   ];
 
@@ -91,16 +94,24 @@ async function seedUsers(query: Query): Promise<void> {
     await query(
       `
         INSERT INTO users (
-          id, organization_id, email, password, name, created_at, updated_at
+          id, organization_id, email, password, name, is_platform_admin, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, now(), now())
+        VALUES ($1, $2, $3, $4, $5, $6, now(), now())
         ON CONFLICT (email) DO UPDATE SET
           organization_id = EXCLUDED.organization_id,
           password = EXCLUDED.password,
           name = EXCLUDED.name,
+          is_platform_admin = EXCLUDED.is_platform_admin,
           updated_at = now()
       `,
-      [user.id, organizationId, user.email, passwordHash, user.name],
+      [
+        user.id,
+        organizationId,
+        user.email,
+        passwordHash,
+        user.name,
+        user.isPlatformAdmin,
+      ],
     );
 
     await query(
