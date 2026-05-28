@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/audit.module';
 import { CreateProjectUseCase } from './application/use-cases/create-project.use-case';
 import { GetProjectDetailUseCase } from './application/use-cases/get-project-detail.use-case';
 import { ListProjectsUseCase } from './application/use-cases/list-projects.use-case';
+import { UpdateProjectStatusUseCase } from './application/use-cases/update-project-status.use-case';
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository';
 import { ProjectOrmEntity } from './infrastructure/persistence/typeorm/project.orm-entity';
 import { TypeOrmProjectRepository } from './infrastructure/persistence/typeorm/typeorm-project.repository';
@@ -21,6 +22,7 @@ import { ProjectsController } from './presentation/controllers/projects.controll
     CreateProjectUseCase,
     GetProjectDetailUseCase,
     ListProjectsUseCase,
+    UpdateProjectStatusUseCase,
     {
       provide: PROJECT_REPOSITORY,
       useClass: TypeOrmProjectRepository,

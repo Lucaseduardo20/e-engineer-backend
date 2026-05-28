@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -31,7 +32,9 @@ import { GetProjectDetailUseCase } from '../../application/use-cases/get-project
 import { ListProjectsUseCase } from '../../application/use-cases/list-projects.use-case';
 import { CreateProjectRequestDto } from '../dto/create-project.request.dto';
 import { ListProjectsQueryDto } from '../dto/list-projects-query.dto';
+import { UpdateProjectStatusDto } from '../dto/update-project-status.dto';
 import { CreateProjectOutputDto } from '../../application/dto/create-project.dto';
+import { UpdateProjectStatusUseCase } from '../../application/use-cases/update-project-status.use-case';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @ApiTags('projects')
@@ -43,6 +46,7 @@ export class ProjectsController {
     private readonly createProjectUseCase: CreateProjectUseCase,
     private readonly listProjectsUseCase: ListProjectsUseCase,
     private readonly getProjectDetailUseCase: GetProjectDetailUseCase,
+    private readonly updateProjectStatusUseCase: UpdateProjectStatusUseCase,
     private readonly audit: AuditQueryService,
   ) {}
 
@@ -105,6 +109,43 @@ export class ProjectsController {
       entityId: project.id,
       description: 'Projeto tecnico criado',
       metadata: { name: project.name },
+    });
+
+    return ok(project);
+  }
+
+  @Patch(':id/status')
+  @ApiOkResponse({ description: 'Status do projeto tecnico atualizado.' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateProjectStatusDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<Project>> {
+    const result = await this.updateProjectStatusUseCase.execute({
+      projectId: id,
+      organizationId: request.user.organizationId,
+      status: body.status,
+    });
+
+    if (result.isFail()) {
+      const error = result.unwrapError();
+
+      if (error.message === 'Project not found.') {
+        throw new NotFoundException(error.message);
+      }
+
+      throw new BadRequestException(error.message);
+    }
+
+    const project = result.unwrap();
+    await this.audit.record({
+      organizationId: request.user.organizationId,
+      actorName: request.user.userId,
+      action: 'project.status.updated',
+      entityType: 'project',
+      entityId: project.id,
+      description: `Status do projeto atualizado para ${body.status}`,
+      metadata: { status: body.status },
     });
 
     return ok(project);

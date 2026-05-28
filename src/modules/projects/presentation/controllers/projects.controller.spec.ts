@@ -5,6 +5,7 @@ import { AuditQueryService } from '../../../audit/infrastructure/repositories/au
 import { CreateProjectUseCase } from '../../application/use-cases/create-project.use-case';
 import { GetProjectDetailUseCase } from '../../application/use-cases/get-project-detail.use-case';
 import { ListProjectsUseCase } from '../../application/use-cases/list-projects.use-case';
+import { UpdateProjectStatusUseCase } from '../../application/use-cases/update-project-status.use-case';
 import { ProjectsController } from './projects.controller';
 
 function createRequest(): AuthenticatedRequest {
@@ -20,6 +21,7 @@ describe('ProjectsController', () => {
   let createProjectUseCase: jest.Mocked<CreateProjectUseCase>;
   let listProjectsUseCase: jest.Mocked<ListProjectsUseCase>;
   let getProjectDetailUseCase: jest.Mocked<GetProjectDetailUseCase>;
+  let updateProjectStatusUseCase: jest.Mocked<UpdateProjectStatusUseCase>;
   let audit: jest.Mocked<AuditQueryService>;
   let controller: ProjectsController;
 
@@ -33,6 +35,9 @@ describe('ProjectsController', () => {
     getProjectDetailUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<GetProjectDetailUseCase>;
+    updateProjectStatusUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UpdateProjectStatusUseCase>;
     audit = {
       record: jest.fn(),
     } as unknown as jest.Mocked<AuditQueryService>;
@@ -40,6 +45,7 @@ describe('ProjectsController', () => {
       createProjectUseCase,
       listProjectsUseCase,
       getProjectDetailUseCase,
+      updateProjectStatusUseCase,
       audit,
     );
   });
@@ -144,5 +150,39 @@ describe('ProjectsController', () => {
         createRequest(),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('updates project status and records audit entries', async () => {
+    updateProjectStatusUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'project-1',
+        name: 'Ponte Norte',
+        status: 'paused',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        progress: 20,
+      }),
+    );
+
+    await expect(
+      controller.updateStatus(
+        'project-1',
+        { status: 'paused' },
+        createRequest(),
+      ),
+    ).resolves.toEqual({
+      data: {
+        id: 'project-1',
+        name: 'Ponte Norte',
+        status: 'paused',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        progress: 20,
+      },
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'project.status.updated',
+        entityId: 'project-1',
+      }),
+    );
   });
 });

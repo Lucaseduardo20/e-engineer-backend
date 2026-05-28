@@ -74,4 +74,8 @@ export class Project extends AggregateRoot<ProjectProps> {
   get status(): ProjectStatus {
     return this.props.status;
   }
+
+  updateStatus(status: ProjectStatus): void {
+    this.props.status = status;
+  }
 }
