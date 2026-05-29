@@ -12,6 +12,14 @@ export const permissions = {
     request: 'priority.request',
     apply: 'priority.apply',
   },
+  knowledge: {
+    read: 'knowledge.read',
+    create: 'knowledge.create',
+    update: 'knowledge.update',
+    publish: 'knowledge.publish',
+    archive: 'knowledge.archive',
+    link: 'knowledge.link',
+  },
   platform: {
     tenantsRead: 'platform.tenants.read',
     tenantSwitch: 'platform.tenant.switch',
