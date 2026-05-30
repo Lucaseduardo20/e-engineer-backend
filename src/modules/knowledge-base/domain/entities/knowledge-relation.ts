@@ -2,12 +2,46 @@ import { Entity } from '../../../../shared/domain/entities/entity';
 import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
 import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
 
+export type KnowledgeRelationTargetType =
+  | 'project'
+  | 'deliverable'
+  | 'document'
+  | 'document_version'
+  | 'review'
+  | 'template';
+
+export type KnowledgeRelationType =
+  | 'reference_for'
+  | 'based_on'
+  | 'model_for'
+  | 'lesson_from'
+  | 'standard_for'
+  | 'checklist_for';
+
+export const knowledgeRelationTargetTypes: KnowledgeRelationTargetType[] = [
+  'project',
+  'deliverable',
+  'document',
+  'document_version',
+  'review',
+  'template',
+];
+
+export const knowledgeRelationTypes: KnowledgeRelationType[] = [
+  'reference_for',
+  'based_on',
+  'model_for',
+  'lesson_from',
+  'standard_for',
+  'checklist_for',
+];
+
 export interface KnowledgeRelationProps {
   organizationId: OrganizationId;
   knowledgeItemId: UniqueEntityId;
-  targetType: string;
+  targetType: KnowledgeRelationTargetType;
   targetId: UniqueEntityId;
-  relationType: string;
+  relationType: KnowledgeRelationType;
   createdBy: string;
   createdAt: Date;
 }
@@ -28,9 +62,9 @@ export class KnowledgeRelation extends Entity<KnowledgeRelationProps> {
     return new KnowledgeRelation({
       organizationId: params.organizationId,
       knowledgeItemId: params.knowledgeItemId,
-      targetType: this.normalizeCode(params.targetType, 'target type'),
+      targetType: this.normalizeTargetType(params.targetType),
       targetId: params.targetId,
-      relationType: this.normalizeCode(params.relationType, 'relation type'),
+      relationType: this.normalizeRelationType(params.relationType),
       createdBy: this.normalizeActor(params.createdBy),
       createdAt: new Date(),
     });
@@ -55,7 +89,7 @@ export class KnowledgeRelation extends Entity<KnowledgeRelationProps> {
     return this.props.knowledgeItemId;
   }
 
-  get targetType(): string {
+  get targetType(): KnowledgeRelationTargetType {
     return this.props.targetType;
   }
 
@@ -63,7 +97,7 @@ export class KnowledgeRelation extends Entity<KnowledgeRelationProps> {
     return this.props.targetId;
   }
 
-  get relationType(): string {
+  get relationType(): KnowledgeRelationType {
     return this.props.relationType;
   }
 
@@ -75,11 +109,21 @@ export class KnowledgeRelation extends Entity<KnowledgeRelationProps> {
     return this.props.createdAt;
   }
 
-  private static normalizeCode(value: string, label: string): string {
-    const code = value.trim().toLowerCase();
+  private static normalizeTargetType(value: string): KnowledgeRelationTargetType {
+    const code = value.trim().toLowerCase() as KnowledgeRelationTargetType;
 
-    if (!/^[a-z][a-z0-9_]{1,39}$/.test(code)) {
-      throw new Error(`Knowledge relation ${label} is invalid.`);
+    if (!knowledgeRelationTargetTypes.includes(code)) {
+      throw new Error('Knowledge relation target type is invalid.');
+    }
+
+    return code;
+  }
+
+  private static normalizeRelationType(value: string): KnowledgeRelationType {
+    const code = value.trim().toLowerCase() as KnowledgeRelationType;
+
+    if (!knowledgeRelationTypes.includes(code)) {
+      throw new Error('Knowledge relation relation type is invalid.');
     }
 
     return code;

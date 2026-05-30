@@ -7,6 +7,7 @@ import {
   type KnowledgeItemRepository,
   type KnowledgeItemResponse,
 } from '../../domain/repositories/knowledge-item.repository';
+import { KnowledgeItemType } from '../../domain/value-objects/knowledge-item-type.vo';
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
 
 export interface UpdateKnowledgeItemInput {
@@ -17,6 +18,7 @@ export interface UpdateKnowledgeItemInput {
   description?: string | null;
   tags?: string[];
   content?: Record<string, unknown> | null;
+  type?: string;
 }
 
 @Injectable()
@@ -39,7 +41,10 @@ export class UpdateKnowledgeItemUseCase {
         throw new Error('Knowledge item not found.');
       }
 
-      item.update(input);
+      item.update({
+        ...input,
+        type: input.type ? KnowledgeItemType.create(input.type) : undefined,
+      });
       await this.knowledgeItems.save(item);
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));

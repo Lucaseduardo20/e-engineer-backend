@@ -14,34 +14,7 @@ import {
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
 
 @Injectable()
-export class PublishKnowledgeItemUseCase {
-
-  private validateMinimumFieldsForPublication(params: {
-    title: string;
-    type: string;
-    createdBy: string;
-    organizationId: string;
-    description: string | null;
-    content: Record<string, unknown> | null;
-  }): void {
-    const hasContentSummary =
-      !!params.content &&
-      typeof params.content.summary === 'string' &&
-      params.content.summary.trim().length > 0;
-
-    if (
-      !params.title.trim() ||
-      !params.type ||
-      !params.createdBy.trim() ||
-      !params.organizationId ||
-      (!params.description?.trim() && !hasContentSummary)
-    ) {
-      throw new Error(
-        'Nao e possivel publicar este item. Preencha as informacoes minimas obrigatorias.',
-      );
-    }
-  }
-
+export class DeprecateKnowledgeItemUseCase {
   constructor(
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
@@ -52,7 +25,7 @@ export class PublishKnowledgeItemUseCase {
   async execute(input: {
     organizationId: string;
     itemId: string;
-    publishedBy: string;
+    deprecatedBy: string;
   }): Promise<Result<KnowledgeItemResponse, Error>> {
     try {
       const item = await this.knowledgeItems.findById(
@@ -64,16 +37,7 @@ export class PublishKnowledgeItemUseCase {
         throw new Error('Knowledge item not found.');
       }
 
-      this.validateMinimumFieldsForPublication({
-        title: item.title,
-        type: item.type.value,
-        createdBy: item.createdBy,
-        organizationId: item.organizationId.toString(),
-        description: item.description,
-        content: item.content,
-      });
-
-      item.publish(input.publishedBy);
+      item.deprecate(input.deprecatedBy);
       await this.knowledgeItems.save(item);
       await this.events.publishAll(item.pullDomainEvents());
 

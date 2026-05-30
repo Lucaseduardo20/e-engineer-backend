@@ -4,6 +4,7 @@ import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-e
 import { KnowledgeItemArchivedEvent } from '../events/knowledge-item-archived.event';
 import { KnowledgeItemCreatedEvent } from '../events/knowledge-item-created.event';
 import { KnowledgeItemPublishedEvent } from '../events/knowledge-item-published.event';
+import { KnowledgeItemDeprecatedEvent } from '../events/knowledge-item-deprecated.event';
 import { KnowledgeItemStatus } from '../value-objects/knowledge-item-status.vo';
 import { KnowledgeItemType } from '../value-objects/knowledge-item-type.vo';
 import { normalizeKnowledgeTags } from '../value-objects/knowledge-tag.vo';
@@ -88,6 +89,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
   update(params: {
     title?: string;
     description?: string | null;
+    type?: KnowledgeItemType;
     tags?: string[];
     content?: KnowledgeContent | null;
     updatedBy: string;
@@ -104,6 +106,10 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
       this.props.description = KnowledgeItem.normalizeOptionalText(
         params.description,
       );
+    }
+
+    if (params.type !== undefined) {
+      this.props.type = params.type;
     }
 
     if (params.tags !== undefined) {
@@ -138,7 +144,7 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
 
   archive(archivedBy: string): void {
     if (this.status.value === 'archived') {
-      return;
+      throw new Error('Knowledge item is already archived.');
     }
 
     this.props.status = KnowledgeItemStatus.create('archived');
@@ -156,13 +162,24 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
 
   deprecate(deprecatedBy: string): void {
     if (this.status.value === 'deprecated') {
-      return;
+      throw new Error('Knowledge item is already deprecated.');
+    }
+
+    if (this.status.value !== 'published') {
+      throw new Error('Only published knowledge items can be deprecated.');
     }
 
     this.props.status = KnowledgeItemStatus.create('deprecated');
     this.props.deprecatedAt = new Date();
     this.props.archivedAt = null;
     this.props.updatedBy = KnowledgeItem.normalizeActor(deprecatedBy);
+    this.addDomainEvent(
+      new KnowledgeItemDeprecatedEvent({
+        aggregateId: this.id,
+        organizationId: this.organizationId.toString(),
+        userId: this.props.updatedBy,
+      }),
+    );
   }
 
   moveToDraft(updatedBy: string): void {

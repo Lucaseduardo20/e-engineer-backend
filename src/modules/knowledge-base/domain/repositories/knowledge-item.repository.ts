@@ -88,6 +88,11 @@ export interface KnowledgeItemRepository {
     params: SearchKnowledgeItemsParams,
   ): Promise<Paginated<KnowledgeItemResponse>>;
   saveRelation(relation: KnowledgeRelation): Promise<void>;
+  removeRelation(params: {
+    relationId: UniqueEntityId;
+    knowledgeItemId: UniqueEntityId;
+    organizationId: OrganizationId;
+  }): Promise<void>;
   saveAttachment(attachment: KnowledgeAttachment): Promise<void>;
   targetExists(params: {
     organizationId: OrganizationId;

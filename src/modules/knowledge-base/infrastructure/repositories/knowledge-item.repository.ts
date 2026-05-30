@@ -101,6 +101,18 @@ export class TypeOrmKnowledgeItemRepository
     await this.attachments.save(KnowledgeItemMapper.attachmentToOrm(attachment));
   }
 
+  async removeRelation(params: {
+    relationId: UniqueEntityId;
+    knowledgeItemId: UniqueEntityId;
+    organizationId: OrganizationId;
+  }): Promise<void> {
+    await this.relations.delete({
+      id: params.relationId.toString(),
+      knowledgeItemId: params.knowledgeItemId.toString(),
+      organizationId: params.organizationId.toString(),
+    });
+  }
+
   async targetExists(params: {
     organizationId: OrganizationId;
     targetType: string;
@@ -121,6 +133,14 @@ export class TypeOrmKnowledgeItemRepository
 
     if (params.targetType === 'document' || params.targetType === 'document_version') {
       return this.documents.exists({ where });
+    }
+
+    if (params.targetType === 'review') {
+      return true;
+    }
+
+    if (params.targetType === 'template') {
+      return true;
     }
 
     if (params.targetType === 'knowledge_item') {

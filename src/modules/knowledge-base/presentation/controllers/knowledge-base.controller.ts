@@ -28,6 +28,7 @@ import {
   type ApiResponse,
 } from '../../../../shared/presentation/api-response';
 import { ArchiveKnowledgeItemUseCase } from '../../application/use-cases/archive-knowledge-item.use-case';
+import { DeprecateKnowledgeItemUseCase } from '../../application/use-cases/deprecate-knowledge-item.use-case';
 import { CreateKnowledgeItemUseCase } from '../../application/use-cases/create-knowledge-item.use-case';
 import { GetKnowledgeItemDetailsUseCase } from '../../application/use-cases/get-knowledge-item-details.use-case';
 import { LinkKnowledgeItemUseCase } from '../../application/use-cases/link-knowledge-item.use-case';
@@ -36,6 +37,7 @@ import { PromoteProjectToKnowledgeUseCase } from '../../application/use-cases/pr
 import { PublishKnowledgeItemUseCase } from '../../application/use-cases/publish-knowledge-item.use-case';
 import { SearchKnowledgeItemsUseCase } from '../../application/use-cases/search-knowledge-items.use-case';
 import { UpdateKnowledgeItemUseCase } from '../../application/use-cases/update-knowledge-item.use-case';
+import { UnlinkKnowledgeItemUseCase } from '../../application/use-cases/unlink-knowledge-item.use-case';
 import type {
   KnowledgeItemDetailResponse,
   KnowledgeItemResponse,
@@ -63,8 +65,10 @@ export class KnowledgeBaseController {
     private readonly updateKnowledgeItem: UpdateKnowledgeItemUseCase,
     private readonly publishKnowledgeItem: PublishKnowledgeItemUseCase,
     private readonly archiveKnowledgeItem: ArchiveKnowledgeItemUseCase,
+    private readonly deprecateKnowledgeItem: DeprecateKnowledgeItemUseCase,
     private readonly linkKnowledgeItem: LinkKnowledgeItemUseCase,
     private readonly promoteProjectToKnowledge: PromoteProjectToKnowledgeUseCase,
+    private readonly unlinkKnowledgeItem: UnlinkKnowledgeItemUseCase,
   ) {}
 
   @Post('knowledge-base')
@@ -193,6 +197,22 @@ export class KnowledgeBaseController {
     return ok(this.unwrapResult(result));
   }
 
+  @Post('knowledge-base/:id/deprecate')
+  @RequirePermissions(permissions.knowledge.publish)
+  @ApiOkResponse({ description: 'Item da base marcado como obsoleto.' })
+  async deprecate(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<KnowledgeItemResponse>> {
+    const result = await this.deprecateKnowledgeItem.execute({
+      organizationId: request.user.organizationId,
+      itemId: id,
+      deprecatedBy: request.user.userId,
+    });
+
+    return ok(this.unwrapResult(result));
+  }
+
   @Post('knowledge-base/:id/relations')
   @RequirePermissions(permissions.knowledge.link)
   @ApiCreatedResponse({ description: 'Relacao de conhecimento criada.' })
@@ -206,6 +226,23 @@ export class KnowledgeBaseController {
       organizationId: request.user.organizationId,
       itemId: id,
       linkedBy: request.user.userId,
+    });
+
+    return ok(this.unwrapResult(result));
+  }
+
+  @Post('knowledge-base/:id/relations/:relationId/remove')
+  @RequirePermissions(permissions.knowledge.link)
+  @ApiOkResponse({ description: 'Relacao de conhecimento removida.' })
+  async unlink(
+    @Param('id') id: string,
+    @Param('relationId') relationId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ removed: true }>> {
+    const result = await this.unlinkKnowledgeItem.execute({
+      organizationId: request.user.organizationId,
+      itemId: id,
+      relationId,
     });
 
     return ok(this.unwrapResult(result));

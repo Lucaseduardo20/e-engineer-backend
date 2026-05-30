@@ -1,4 +1,8 @@
-import { IsArray, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  knowledgeItemTypes,
+  type KnowledgeItemTypeValue,
+} from '../../domain/value-objects/knowledge-item-type.vo';
 
 export class UpdateKnowledgeItemDto {
   @IsOptional()
@@ -10,6 +14,10 @@ export class UpdateKnowledgeItemDto {
   @IsString()
   @MaxLength(4000)
   description?: string | null;
+
+  @IsOptional()
+  @IsIn(knowledgeItemTypes)
+  type?: KnowledgeItemTypeValue;
 
   @IsOptional()
   @IsArray()
