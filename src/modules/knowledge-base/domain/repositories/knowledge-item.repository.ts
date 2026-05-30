@@ -17,8 +17,8 @@ export interface KnowledgeItemResponse {
   description?: string | null;
   type: KnowledgeItemTypeValue;
   status: KnowledgeItemStatusValue;
-  tags: string[];
   visibility: KnowledgeVisibilityValue;
+  tags: string[];
   content?: Record<string, unknown> | null;
   createdBy: string;
   updatedBy: string;
@@ -62,6 +62,7 @@ export interface ListKnowledgeItemsParams {
   type?: KnowledgeItemTypeValue;
   status?: KnowledgeItemStatusValue;
   tags?: string[];
+  includeArchived?: boolean;
 }
 
 export interface SearchKnowledgeItemsParams extends ListKnowledgeItemsParams {

@@ -431,7 +431,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
       title: 'Projeto de drenagem',
       versions: [['R00', false, 'in_review', 'Primeira emissao tecnica.']],
     },
-  ] as const;
+  ];
 
   for (const documentData of documents) {
     const deliverableId = uuidFromText(
@@ -462,10 +462,11 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
 
     for (const [index, version] of documentData.versions.entries()) {
       const [revision, isOfficial, status, notes] = version;
+      const revisionCode = String(revision);
       const versionId = uuidFromText(
-        `document-version:${documentId}:${revision}`,
+        `document-version:${documentId}:${revisionCode}`,
       );
-      const fileName = `${slugify(documentData.title)}-${revision.toLowerCase()}.pdf`;
+      const fileName = `${slugify(documentData.title)}-${revisionCode.toLowerCase()}.pdf`;
 
       await query(
         `
@@ -488,7 +489,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
           versionId,
           organizationId,
           documentId,
-          revision,
+          revisionCode,
           fileName,
           `/fake-storage/projects/${documentData.project.id}/${fileName}`,
           index % 2 === 0 ? 'Lucas Eduardo' : 'Leonardo',
@@ -595,12 +596,26 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
 }
 
 
+
+type SeedKnowledgeItem = {
+  key: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  tags: string[];
+  content: Record<string, unknown>;
+  publishedAt?: Date | null;
+  archivedAt?: Date | null;
+  deprecatedAt?: Date | null;
+};
+
 async function seedKnowledgeBase(query: Query): Promise<void> {
   const author = 'Lucas Eduardo';
   const reviewer = 'Leonardo';
   const now = new Date();
 
-  const items = [
+  const items: SeedKnowledgeItem[] = [
     {
       key: 'kb:technical-standard:nomenclatura-arquivos',
       title: 'Padrao de nomenclatura de arquivos tecnicos',
@@ -728,7 +743,7 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       publishedAt: now,
       archivedAt: now,
     },
-  ] as const;
+  ];
 
   for (const item of items) {
     await query(
@@ -805,7 +820,7 @@ async function seedActivityLog(query: Query): Promise<void> {
     ['Rafael', 'review.requested', 'review', null, 'Revisao solicitada'],
     ['Lucas Eduardo', 'review.approved', 'review', null, 'Revisao aprovada'],
     ['Rafael', 'review.rejected', 'review', null, 'Revisao reprovada'],
-  ] as const;
+  ];
 
   for (const [index, activity] of activities.entries()) {
     const [actorName, action, entityType, entityId, description] = activity;

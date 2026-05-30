@@ -98,6 +98,7 @@ export class KnowledgeBaseController {
         tags: query.tags,
         page: query.page,
         pageSize: query.pageSize,
+        includeArchived: query.includeArchived,
       })
       .then(ok);
   }
@@ -118,6 +119,7 @@ export class KnowledgeBaseController {
         tags: query.tags,
         page: query.page,
         pageSize: query.pageSize,
+        includeArchived: query.includeArchived,
       })
       .then(ok);
   }

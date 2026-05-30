@@ -150,6 +150,8 @@ export class TypeOrmKnowledgeItemRepository
 
     if (params.status) {
       query.andWhere('item.status = :status', { status: params.status });
+    } else if (!params.includeArchived) {
+      query.andWhere('item.status != :archivedStatus', { archivedStatus: 'archived' });
     }
 
     if (params.tags?.length) {

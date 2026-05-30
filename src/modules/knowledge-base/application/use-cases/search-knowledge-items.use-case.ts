@@ -25,6 +25,7 @@ export class SearchKnowledgeItemsUseCase {
     tags?: string[];
     page: number;
     pageSize: number;
+    includeArchived?: boolean;
   }): Promise<Paginated<KnowledgeItemResponse>> {
     return this.knowledgeItems.search(
       OrganizationId.create(input.organizationId),
@@ -37,6 +38,7 @@ export class SearchKnowledgeItemsUseCase {
           ? KnowledgeItemStatus.create(input.status).value
           : 'published',
         tags: normalizeKnowledgeTags(input.tags ?? []),
+        includeArchived: input.includeArchived ?? false,
       },
     );
   }

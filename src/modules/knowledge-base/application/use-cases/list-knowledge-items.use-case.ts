@@ -24,15 +24,22 @@ export class ListKnowledgeItemsUseCase {
     tags?: string[];
     page: number;
     pageSize: number;
+    includeArchived?: boolean;
   }): Promise<Paginated<KnowledgeItemResponse>> {
-    return this.knowledgeItems.list(OrganizationId.create(input.organizationId), {
-      page: input.page,
-      pageSize: input.pageSize,
-      type: input.type ? KnowledgeItemType.create(input.type).value : undefined,
-      status: input.status
-        ? KnowledgeItemStatus.create(input.status).value
-        : 'published',
-      tags: normalizeKnowledgeTags(input.tags ?? []),
-    });
+    return this.knowledgeItems.list(
+      OrganizationId.create(input.organizationId),
+      {
+        page: input.page,
+        pageSize: input.pageSize,
+        type: input.type
+          ? KnowledgeItemType.create(input.type).value
+          : undefined,
+        status: input.status
+          ? KnowledgeItemStatus.create(input.status).value
+          : 'published',
+        tags: normalizeKnowledgeTags(input.tags ?? []),
+        includeArchived: input.includeArchived ?? false,
+      },
+    );
   }
 }

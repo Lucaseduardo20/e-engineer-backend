@@ -1,5 +1,12 @@
 import { Transform } from 'class-transformer';
-import { IsArray, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/presentation/pagination-query.dto';
 import {
   knowledgeItemStatuses,
@@ -9,6 +16,16 @@ import {
   knowledgeItemTypes,
   type KnowledgeItemTypeValue,
 } from '../../domain/value-objects/knowledge-item-type.vo';
+
+function toBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'sim'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'nao', 'não'].includes(normalized)) return false;
+  }
+  return undefined;
+}
 
 function splitCsv(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
@@ -36,6 +53,11 @@ export class ListKnowledgeItemsQueryDto extends PaginationQueryDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => toBoolean(value))
+  @IsBoolean()
+  includeArchived?: boolean;
 }
 
 export class SearchKnowledgeItemsQueryDto extends ListKnowledgeItemsQueryDto {

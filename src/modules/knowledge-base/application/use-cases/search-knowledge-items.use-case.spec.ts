@@ -29,6 +29,7 @@ describe('SearchKnowledgeItemsUseCase', () => {
       type: 'document_model',
       status: 'published',
       tags: ['memorial'],
+      includeArchived: false,
     });
   });
 });
