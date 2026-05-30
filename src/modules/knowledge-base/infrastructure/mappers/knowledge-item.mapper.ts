@@ -11,6 +11,7 @@ import type {
 } from '../../domain/repositories/knowledge-item.repository';
 import { KnowledgeItemStatus } from '../../domain/value-objects/knowledge-item-status.vo';
 import { KnowledgeItemType } from '../../domain/value-objects/knowledge-item-type.vo';
+import { KnowledgeVisibility } from '../../domain/value-objects/knowledge-visibility.vo';
 import { KnowledgeAttachmentOrmEntity } from '../persistence/typeorm/knowledge-attachment.orm-entity';
 import { KnowledgeItemOrmEntity } from '../persistence/typeorm/knowledge-item.orm-entity';
 import { KnowledgeRelationOrmEntity } from '../persistence/typeorm/knowledge-relation.orm-entity';
@@ -24,12 +25,14 @@ export class KnowledgeItemMapper {
     orm.description = item.description;
     orm.type = item.type.value;
     orm.status = item.status.value;
+    orm.visibility = item.visibility.value;
     orm.tags = item.tags;
     orm.content = item.content;
     orm.createdBy = item.createdBy;
     orm.updatedBy = item.updatedBy;
     orm.publishedAt = item.publishedAt;
     orm.archivedAt = item.archivedAt;
+    orm.deprecatedAt = item.deprecatedAt;
 
     if (item.createdAt) {
       orm.createdAt = item.createdAt;
@@ -50,12 +53,14 @@ export class KnowledgeItemMapper {
         description: orm.description,
         type: KnowledgeItemType.create(orm.type),
         status: KnowledgeItemStatus.create(orm.status),
+        visibility: KnowledgeVisibility.create(orm.visibility ?? 'organization'),
         tags: orm.tags ?? [],
         content: orm.content,
         createdBy: orm.createdBy,
         updatedBy: orm.updatedBy,
         publishedAt: orm.publishedAt,
         archivedAt: orm.archivedAt,
+        deprecatedAt: orm.deprecatedAt,
         createdAt: orm.createdAt,
         updatedAt: orm.updatedAt,
       },
@@ -71,12 +76,14 @@ export class KnowledgeItemMapper {
       description: item.description,
       type: item.type.value,
       status: item.status.value,
+      visibility: item.visibility.value,
       tags: item.tags,
       content: item.content,
       createdBy: item.createdBy,
       updatedBy: item.updatedBy,
       publishedAt: item.publishedAt?.toISOString() ?? null,
       archivedAt: item.archivedAt?.toISOString() ?? null,
+      deprecatedAt: item.deprecatedAt?.toISOString() ?? null,
       createdAt: item.createdAt?.toISOString() ?? new Date().toISOString(),
       updatedAt: item.updatedAt?.toISOString() ?? new Date().toISOString(),
     };
@@ -90,12 +97,14 @@ export class KnowledgeItemMapper {
       description: orm.description,
       type: KnowledgeItemType.create(orm.type).value,
       status: KnowledgeItemStatus.create(orm.status).value,
+      visibility: KnowledgeVisibility.create(orm.visibility ?? 'organization').value,
       tags: orm.tags ?? [],
       content: orm.content,
       createdBy: orm.createdBy,
       updatedBy: orm.updatedBy,
       publishedAt: orm.publishedAt?.toISOString() ?? null,
       archivedAt: orm.archivedAt?.toISOString() ?? null,
+      deprecatedAt: orm.deprecatedAt?.toISOString() ?? null,
       createdAt: orm.createdAt.toISOString(),
       updatedAt: orm.updatedAt.toISOString(),
     };

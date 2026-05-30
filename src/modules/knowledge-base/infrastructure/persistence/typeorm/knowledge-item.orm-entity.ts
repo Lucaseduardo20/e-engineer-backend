@@ -19,6 +19,9 @@ export class KnowledgeItemOrmEntity extends TenantScopedOrmEntity {
   @Column({ type: 'varchar', length: 40, default: 'draft' })
   status!: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'organization' })
+  visibility!: string;
+
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
   tags!: string[];
 
@@ -36,6 +39,9 @@ export class KnowledgeItemOrmEntity extends TenantScopedOrmEntity {
 
   @Column({ name: 'archived_at', type: 'timestamptz', nullable: true })
   archivedAt!: Date | null;
+
+  @Column({ name: 'deprecated_at', type: 'timestamptz', nullable: true })
+  deprecatedAt!: Date | null;
 
   @OneToMany(() => KnowledgeRelationOrmEntity, (relation) => relation.item)
   relations!: KnowledgeRelationOrmEntity[];

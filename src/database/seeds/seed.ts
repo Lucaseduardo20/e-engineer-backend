@@ -594,6 +594,190 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
   }
 }
 
+
+async function seedKnowledgeBase(query: Query): Promise<void> {
+  const author = 'Lucas Eduardo';
+  const reviewer = 'Leonardo';
+  const now = new Date();
+
+  const items = [
+    {
+      key: 'kb:technical-standard:nomenclatura-arquivos',
+      title: 'Padrao de nomenclatura de arquivos tecnicos',
+      description: 'Define o padrao de nomes para arquivos PDF, DWG e planilhas por disciplina e revisao.',
+      type: 'technical_standard',
+      status: 'published',
+      tags: ['padrao-tecnico', 'nomenclatura', 'documentacao', 'prefeitura-sp'],
+      content: {
+        objective: 'Padronizar nomes para evitar versoes duplicadas e perda de rastreabilidade.',
+        convention: 'DISCIPLINA_TIPO_PROJETO_CLIENTE_REVISAO_DATA',
+        examples: ['ARQ_UBS_VILA_ESPERANCA_R02_2026-03-10', 'HID_REFORMA_ESCOLA_JP_R01_2026-02-20'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:technical-standard:organizacao-disciplinas-ubs',
+      title: 'Organizacao de disciplinas em projetos de UBS',
+      description: 'Orienta a sequencia de compatibilizacao entre arquitetura, estrutural, eletrico e hidraulico.',
+      type: 'technical_standard',
+      status: 'published',
+      tags: ['ubs', 'compatibilizacao', 'arquitetura', 'hidraulica'],
+      content: {
+        sequence: ['arquitetura', 'estrutural', 'hidraulica', 'eletrica'],
+        qualityGate: 'Revisao cruzada obrigatoria antes da emissao oficial.',
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:document-model:memorial-reforma-escolar',
+      title: 'Memorial descritivo para reforma escolar',
+      description: 'Modelo base de memorial descritivo para reformas em unidades escolares municipais.',
+      type: 'document_model',
+      status: 'published',
+      tags: ['memorial', 'reforma', 'escola', 'prefeitura'],
+      content: {
+        sections: ['escopo', 'diagnostico', 'solucoes tecnicas', 'materiais', 'acessibilidade'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:document-model:relatorio-fotografico-vistoria',
+      title: 'Relatorio fotografico de vistoria inicial',
+      description: 'Estrutura recomendada para registro de vistoria inicial com fotos antes/depois.',
+      type: 'document_model',
+      status: 'draft',
+      tags: ['relatorio-fotografico', 'vistoria', 'levantamento'],
+      content: {
+        requiredFields: ['local', 'data', 'responsavel', 'contexto', 'evidencias'],
+      },
+      publishedAt: null,
+    },
+    {
+      key: 'kb:project-reference:ubs-vila-esperanca',
+      title: 'Construcao da UBS Vila Esperanca',
+      description: 'Projeto de referencia para novas UBS com foco em padrao de compatibilizacao e entrega.',
+      type: 'project_reference',
+      status: 'published',
+      tags: ['ubs', 'saude', 'projeto-referencia'],
+      content: {
+        sourceProjectName: 'Construcao da UBS Vila Esperanca',
+        reuseHints: ['base de memorial', 'base de checklists', 'premissas de compatibilizacao'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:project-reference:escola-jardim-primavera',
+      title: 'Reforma da Escola Municipal Jardim Primavera',
+      description: 'Referencia para projetos de reforma escolar com exigencias de acessibilidade.',
+      type: 'project_reference',
+      status: 'published',
+      tags: ['escola', 'reforma', 'acessibilidade', 'projeto-referencia'],
+      content: {
+        sourceProjectName: 'Reforma da Escola Municipal Jardim Primavera',
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      title: 'Divergencia de quantitativos em orcamento de UBS',
+      description: 'Licao aprendida: validar quantitativos com arquitetura antes do fechamento do orcamento.',
+      type: 'lesson_learned',
+      status: 'published',
+      tags: ['orcamento', 'ubs', 'quantitativos', 'licao-aprendida'],
+      content: {
+        trigger: 'Revisao R01 reprovada por divergencia de area de piso.',
+        prevention: 'Checklist de conferencias cruzadas antes da revisao final.',
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:lesson-learned:compatibilizacao-tardia-arq-hid',
+      title: 'Compatibilizacao tardia entre arquitetura e hidraulica',
+      description: 'Aprendizado sobre antecipar compatibilizacao para reduzir retrabalho em fase de revisao.',
+      type: 'lesson_learned',
+      status: 'deprecated',
+      tags: ['compatibilizacao', 'arquitetura', 'hidraulica', 'retrabalho'],
+      content: {
+        note: 'Processo antigo depreciado apos adocao de gate de compatibilizacao inicial.',
+      },
+      publishedAt: now,
+      deprecatedAt: now,
+    },
+    {
+      key: 'kb:review-checklist:revisao-orcamento',
+      title: 'Revisao de orcamento antes de envio ao cliente',
+      description: 'Checklist de revisao tecnica e financeira para evitar inconsistencias no envio.',
+      type: 'review_checklist',
+      status: 'published',
+      tags: ['checklist', 'revisao', 'orcamento'],
+      content: {
+        steps: ['conferencia de quantitativos', 'conferencia de composicoes', 'validacao de premissas'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:delivery-standard:pacote-tecnico-prefeitura',
+      title: 'Pacote tecnico para prefeitura',
+      description: 'Padrao de entrega final para prefeituras com estrutura de pastas e documentos obrigatorios.',
+      type: 'delivery_standard',
+      status: 'archived',
+      tags: ['entrega', 'prefeitura', 'pacote-final'],
+      content: {
+        packageStructure: ['01-memorial', '02-pranchas', '03-orcamento', '04-cronograma', '05-art-rrt'],
+      },
+      publishedAt: now,
+      archivedAt: now,
+    },
+  ] as const;
+
+  for (const item of items) {
+    await query(
+      `
+        INSERT INTO knowledge_items (
+          id, organization_id, title, description, type, status, visibility,
+          content, tags, created_by, updated_by, published_at, archived_at, deprecated_at,
+          created_at, updated_at
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7,
+          $8::jsonb, $9::jsonb, $10, $11, $12, $13, $14,
+          now(), now()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          type = EXCLUDED.type,
+          status = EXCLUDED.status,
+          visibility = EXCLUDED.visibility,
+          content = EXCLUDED.content,
+          tags = EXCLUDED.tags,
+          created_by = EXCLUDED.created_by,
+          updated_by = EXCLUDED.updated_by,
+          published_at = EXCLUDED.published_at,
+          archived_at = EXCLUDED.archived_at,
+          deprecated_at = EXCLUDED.deprecated_at,
+          updated_at = now()
+      `,
+      [
+        uuidFromText(item.key),
+        organizationId,
+        item.title,
+        item.description,
+        item.type,
+        item.status,
+        'organization',
+        JSON.stringify(item.content),
+        JSON.stringify(item.tags),
+        author,
+        reviewer,
+        item.publishedAt ?? null,
+        item.archivedAt ?? null,
+        item.deprecatedAt ?? null,
+      ],
+    );
+  }
+}
+
 async function seedActivityLog(query: Query): Promise<void> {
   const activities = [
     [
@@ -669,6 +853,7 @@ async function main(): Promise<void> {
       await seedTemplates(query);
       await seedProjectsAndDeliverables(query);
       await seedDocumentsAndReviews(query);
+      await seedKnowledgeBase(query);
       await seedActivityLog(query);
     });
 
