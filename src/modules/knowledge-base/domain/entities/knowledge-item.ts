@@ -7,6 +7,7 @@ import { KnowledgeItemPublishedEvent } from '../events/knowledge-item-published.
 import { KnowledgeItemStatus } from '../value-objects/knowledge-item-status.vo';
 import { KnowledgeItemType } from '../value-objects/knowledge-item-type.vo';
 import { normalizeKnowledgeTags } from '../value-objects/knowledge-tag.vo';
+import { KnowledgeVisibility } from '../value-objects/knowledge-visibility.vo';
 
 export type KnowledgeContent = Record<string, unknown>;
 
@@ -17,11 +18,13 @@ export interface KnowledgeItemProps {
   type: KnowledgeItemType;
   status: KnowledgeItemStatus;
   tags: string[];
+  visibility: KnowledgeVisibility;
   content?: KnowledgeContent | null;
   createdBy: string;
   updatedBy: string;
   publishedAt?: Date | null;
   archivedAt?: Date | null;
+  deprecatedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -47,17 +50,20 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
       type: params.type,
       status: KnowledgeItemStatus.draft(),
       tags: normalizeKnowledgeTags(params.tags ?? []),
+      visibility: KnowledgeVisibility.default(),
       content: this.normalizeContent(params.content),
       createdBy: this.normalizeActor(params.createdBy),
       updatedBy: this.normalizeActor(params.createdBy),
       publishedAt: null,
       archivedAt: null,
+      deprecatedAt: null,
     });
 
     item.addDomainEvent(
       new KnowledgeItemCreatedEvent({
         aggregateId: item.id,
         organizationId: item.organizationId.toString(),
+        userId: item.createdBy,
       }),
     );
 
@@ -119,11 +125,13 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
     this.props.status = KnowledgeItemStatus.create('published');
     this.props.publishedAt = new Date();
     this.props.archivedAt = null;
+    this.props.deprecatedAt = null;
     this.props.updatedBy = KnowledgeItem.normalizeActor(publishedBy);
     this.addDomainEvent(
       new KnowledgeItemPublishedEvent({
         aggregateId: this.id,
         organizationId: this.organizationId.toString(),
+        userId: this.props.updatedBy,
       }),
     );
   }
@@ -135,18 +143,47 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
 
     this.props.status = KnowledgeItemStatus.create('archived');
     this.props.archivedAt = new Date();
+    this.props.deprecatedAt = null;
     this.props.updatedBy = KnowledgeItem.normalizeActor(archivedBy);
     this.addDomainEvent(
       new KnowledgeItemArchivedEvent({
         aggregateId: this.id,
         organizationId: this.organizationId.toString(),
+        userId: this.props.updatedBy,
       }),
     );
+  }
+
+  deprecate(deprecatedBy: string): void {
+    if (this.status.value === 'deprecated') {
+      return;
+    }
+
+    this.props.status = KnowledgeItemStatus.create('deprecated');
+    this.props.deprecatedAt = new Date();
+    this.props.archivedAt = null;
+    this.props.updatedBy = KnowledgeItem.normalizeActor(deprecatedBy);
   }
 
   moveToDraft(updatedBy: string): void {
     this.props.status = KnowledgeItemStatus.draft();
     this.props.updatedBy = KnowledgeItem.normalizeActor(updatedBy);
+  }
+
+  isOfficial(): boolean {
+    return this.status.value === 'published';
+  }
+
+  isArchived(): boolean {
+    return this.status.value === 'archived';
+  }
+
+  isDeprecated(): boolean {
+    return this.status.value === 'deprecated';
+  }
+
+  canBeRecommended(): boolean {
+    return this.status.value === 'published';
   }
 
   get id(): string {
@@ -177,6 +214,10 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
     return [...this.props.tags];
   }
 
+  get visibility(): KnowledgeVisibility {
+    return this.props.visibility;
+  }
+
   get content(): KnowledgeContent | null {
     return this.props.content ?? null;
   }
@@ -195,6 +236,10 @@ export class KnowledgeItem extends AggregateRoot<KnowledgeItemProps> {
 
   get archivedAt(): Date | null {
     return this.props.archivedAt ?? null;
+  }
+
+  get deprecatedAt(): Date | null {
+    return this.props.deprecatedAt ?? null;
   }
 
   get createdAt(): Date | undefined {

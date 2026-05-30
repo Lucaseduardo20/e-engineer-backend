@@ -6,6 +6,7 @@ import { KnowledgeItem } from '../entities/knowledge-item';
 import { KnowledgeRelation } from '../entities/knowledge-relation';
 import type { KnowledgeItemStatusValue } from '../value-objects/knowledge-item-status.vo';
 import type { KnowledgeItemTypeValue } from '../value-objects/knowledge-item-type.vo';
+import type { KnowledgeVisibilityValue } from '../value-objects/knowledge-visibility.vo';
 
 export const KNOWLEDGE_ITEM_REPOSITORY = Symbol('KNOWLEDGE_ITEM_REPOSITORY');
 
@@ -17,11 +18,13 @@ export interface KnowledgeItemResponse {
   type: KnowledgeItemTypeValue;
   status: KnowledgeItemStatusValue;
   tags: string[];
+  visibility: KnowledgeVisibilityValue;
   content?: Record<string, unknown> | null;
   createdBy: string;
   updatedBy: string;
   publishedAt?: string | null;
   archivedAt?: string | null;
+  deprecatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -3,7 +3,11 @@ import { BaseDomainEvent } from '../../../../shared/domain/events/base-domain-ev
 export class KnowledgeItemPublishedEvent extends BaseDomainEvent {
   readonly eventName = 'KnowledgeItemPublished';
 
-  constructor(params: { aggregateId: string; organizationId: string }) {
+  constructor(params: {
+    aggregateId: string;
+    organizationId: string;
+    userId: string;
+  }) {
     super(params);
   }
 }

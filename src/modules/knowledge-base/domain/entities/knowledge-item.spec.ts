@@ -17,6 +17,18 @@ describe('KnowledgeItem', () => {
     expect(item.title).toBe('Padrao de nomenclatura');
     expect(item.status.value).toBe('draft');
     expect(item.tags).toEqual(['documentos', 'revisao tecnica']);
+    expect(item.visibility.value).toBe('organization');
+  });
+
+  it('does not allow creation without organization', () => {
+    expect(() =>
+      KnowledgeItem.create({
+        organizationId: undefined as unknown as OrganizationId,
+        createdBy: 'user-1',
+        title: 'Padrao',
+        type: KnowledgeItemType.create('technical_standard'),
+      }),
+    ).toThrow();
   });
 
   it('rejects an empty title', () => {
@@ -30,7 +42,7 @@ describe('KnowledgeItem', () => {
     ).toThrow('Knowledge item title is required.');
   });
 
-  it('publishes and archives with timestamps', () => {
+  it('publishes a draft item and marks as official', () => {
     const item = KnowledgeItem.create({
       organizationId,
       createdBy: 'user-1',
@@ -39,12 +51,43 @@ describe('KnowledgeItem', () => {
     });
 
     item.publish('admin-1');
+
     expect(item.status.value).toBe('published');
     expect(item.publishedAt).toBeInstanceOf(Date);
+    expect(item.isOfficial()).toBe(true);
+    expect(item.canBeRecommended()).toBe(true);
+  });
+
+  it('archives item', () => {
+    const item = KnowledgeItem.create({
+      organizationId,
+      createdBy: 'user-1',
+      title: 'Modelo antigo',
+      type: KnowledgeItemType.create('document_model'),
+    });
 
     item.archive('admin-1');
+
     expect(item.status.value).toBe('archived');
     expect(item.archivedAt).toBeInstanceOf(Date);
+    expect(item.isArchived()).toBe(true);
+  });
+
+  it('deprecates item and it cannot be recommended', () => {
+    const item = KnowledgeItem.create({
+      organizationId,
+      createdBy: 'user-1',
+      title: 'Padrao obsoleto',
+      type: KnowledgeItemType.create('technical_standard'),
+    });
+
+    item.publish('admin-1');
+    item.deprecate('admin-1');
+
+    expect(item.status.value).toBe('deprecated');
+    expect(item.deprecatedAt).toBeInstanceOf(Date);
+    expect(item.isDeprecated()).toBe(true);
+    expect(item.canBeRecommended()).toBe(false);
   });
 
   it('does not publish directly from archived', () => {
