@@ -68,7 +68,7 @@ export class KnowledgeItemMapper {
     );
   }
 
-  static toResponse(item: KnowledgeItem): KnowledgeItemResponse {
+  static toResponse(item: KnowledgeItem, tags: KnowledgeItemResponse['tags'] = []): KnowledgeItemResponse {
     return {
       id: item.id,
       organizationId: item.organizationId.toString(),
@@ -77,7 +77,9 @@ export class KnowledgeItemMapper {
       type: item.type.value,
       status: item.status.value,
       visibility: item.visibility.value,
-      tags: item.tags,
+      tags,
+      tagNames: tags.map((t) => t.name),
+      tagIds: tags.map((t) => t.id),
       content: item.content,
       createdBy: item.createdBy,
       updatedBy: item.updatedBy,
@@ -89,7 +91,7 @@ export class KnowledgeItemMapper {
     };
   }
 
-  static ormToResponse(orm: KnowledgeItemOrmEntity): KnowledgeItemResponse {
+  static ormToResponse(orm: KnowledgeItemOrmEntity, tags: KnowledgeItemResponse['tags'] = []): KnowledgeItemResponse {
     return {
       id: orm.id,
       organizationId: orm.organizationId,
@@ -98,7 +100,9 @@ export class KnowledgeItemMapper {
       type: KnowledgeItemType.create(orm.type).value,
       status: KnowledgeItemStatus.create(orm.status).value,
       visibility: KnowledgeVisibility.create(orm.visibility ?? 'organization').value,
-      tags: orm.tags ?? [],
+      tags,
+      tagNames: tags.map((t) => t.name),
+      tagIds: tags.map((t) => t.id),
       content: orm.content,
       createdBy: orm.createdBy,
       updatedBy: orm.updatedBy,
@@ -110,9 +114,9 @@ export class KnowledgeItemMapper {
     };
   }
 
-  static ormToDetail(orm: KnowledgeItemOrmEntity): KnowledgeItemDetailResponse {
+  static ormToDetail(orm: KnowledgeItemOrmEntity, tags: KnowledgeItemResponse['tags'] = []): KnowledgeItemDetailResponse {
     return {
-      ...this.ormToResponse(orm),
+      ...this.ormToResponse(orm, tags),
       relations: (orm.relations ?? []).map(this.ormRelationToResponse),
       attachments: (orm.attachments ?? []).map(this.ormAttachmentToResponse),
     };

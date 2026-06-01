@@ -17,6 +17,7 @@ export interface UpdateKnowledgeItemInput {
   title?: string;
   description?: string | null;
   tags?: string[];
+  tagIds?: string[];
   content?: Record<string, unknown> | null;
   type?: string;
 }
@@ -46,6 +47,14 @@ export class UpdateKnowledgeItemUseCase {
         type: input.type ? KnowledgeItemType.create(input.type) : undefined,
       });
       await this.knowledgeItems.save(item);
+      if (input.tagIds) {
+        await this.knowledgeItems.syncTags({
+          knowledgeItemId: new UniqueEntityId(item.id),
+          organizationId: OrganizationId.create(input.organizationId),
+          tagIds: [...new Set(input.tagIds)],
+          actorId: input.updatedBy,
+        });
+      }
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {

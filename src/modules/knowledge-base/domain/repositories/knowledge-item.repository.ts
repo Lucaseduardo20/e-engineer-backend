@@ -11,6 +11,9 @@ import type { KnowledgeVisibilityValue } from '../value-objects/knowledge-visibi
 export const KNOWLEDGE_ITEM_REPOSITORY = Symbol('KNOWLEDGE_ITEM_REPOSITORY');
 
 export interface KnowledgeItemResponse {
+  // Legacy: kept temporarily for compatibility
+  tagNames?: string[];
+  tagIds?: string[];
   id: string;
   organizationId: string;
   title: string;
@@ -18,7 +21,13 @@ export interface KnowledgeItemResponse {
   type: KnowledgeItemTypeValue;
   status: KnowledgeItemStatusValue;
   visibility: KnowledgeVisibilityValue;
-  tags: string[];
+  tags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
   content?: Record<string, unknown> | null;
   createdBy: string;
   updatedBy: string;
@@ -62,6 +71,7 @@ export interface ListKnowledgeItemsParams {
   type?: KnowledgeItemTypeValue;
   status?: KnowledgeItemStatusValue;
   tags?: string[];
+  tagIds?: string[];
   includeArchived?: boolean;
 }
 
@@ -99,4 +109,10 @@ export interface KnowledgeItemRepository {
     targetType: string;
     targetId: UniqueEntityId;
   }): Promise<boolean>;
+  syncTags(params: {
+    knowledgeItemId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+  }): Promise<void>;
 }

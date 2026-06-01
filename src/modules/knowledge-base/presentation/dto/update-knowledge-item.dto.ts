@@ -1,4 +1,5 @@
 import { IsArray, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsUUID } from 'class-validator';
 import {
   knowledgeItemTypes,
   type KnowledgeItemTypeValue,
@@ -23,6 +24,11 @@ export class UpdateKnowledgeItemDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  tagIds?: string[];
 
   @IsOptional()
   @IsObject()

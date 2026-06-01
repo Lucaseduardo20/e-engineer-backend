@@ -5,6 +5,7 @@ import {
 } from '../../../../shared/application/ports/domain-event-publisher';
 import { Result } from '../../../../shared/application/result/result';
 import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
+import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
 import { KnowledgeItem } from '../../domain/entities/knowledge-item';
 import {
   KNOWLEDGE_ITEM_REPOSITORY,
@@ -22,6 +23,7 @@ export interface CreateKnowledgeItemInput {
   description?: string | null;
   type: string;
   tags?: string[];
+  tagIds?: string[];
   content?: Record<string, unknown> | null;
 }
 
@@ -50,6 +52,14 @@ export class CreateKnowledgeItemUseCase {
       });
 
       await this.knowledgeItems.save(item);
+      if (input.tagIds) {
+        await this.knowledgeItems.syncTags({
+          knowledgeItemId: new UniqueEntityId(item.id),
+          organizationId: OrganizationId.create(input.organizationId),
+          tagIds: [...new Set(input.tagIds)],
+          actorId: input.createdBy,
+        });
+      }
       await this.events.publishAll(item.pullDomainEvents());
       await this.audit.record({
         organizationId: input.organizationId,
