@@ -222,7 +222,7 @@ const projects = [
     name: 'Reforma da Escola Municipal Jardim Primavera',
     projectType: 'reforma escolar',
     client: 'Prefeitura Municipal de Sao Paulo',
-    status: 'in_progress',
+    status: 'completed',
     responsible: 'Lucas Eduardo',
     tags: ['escola', 'reforma', 'prefeitura', 'acessibilidade'],
   },
@@ -232,7 +232,7 @@ const projects = [
     name: 'Construcao da UBS Vila Esperanca',
     projectType: 'unidade de saude',
     client: 'Prefeitura Municipal de Sao Paulo',
-    status: 'in_review',
+    status: 'in_progress',
     responsible: 'Leonardo',
     tags: ['saude', 'UBS', 'obra publica', 'fundacao'],
   },
@@ -413,13 +413,13 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
     {
       project: projects[0],
       deliverableName: 'Memorial descritivo',
-      title: 'Memorial descritivo',
+      title: 'Memorial Descritivo - Reforma Escolar',
       versions: [['R00', true, 'approved', 'Memorial oficial da reforma.']],
     },
     {
       project: projects[1],
       deliverableName: 'Orcamento',
-      title: 'Orcamento',
+      title: 'Planilha Orcamentaria - UBS Vila Esperanca',
       versions: [
         ['R00', false, 'superseded', 'Planilha preliminar.'],
         ['R01', false, 'in_review', 'Em revisao de quantitativos.'],
@@ -520,7 +520,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
       id: 'orcamento-r01',
       project: projects[1],
       deliverable: 'Orcamento',
-      document: 'Orcamento',
+      document: 'Planilha Orcamentaria - UBS Vila Esperanca',
       revision: 'R01',
       status: 'rejected',
       requestedBy: 'Lucas Eduardo',
@@ -675,8 +675,27 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       status: 'published',
       tags: ['ubs', 'saude', 'projeto-referencia'],
       content: {
-        sourceProjectName: 'Construcao da UBS Vila Esperanca',
-        reuseHints: ['base de memorial', 'base de checklists', 'premissas de compatibilizacao'],
+        summary: 'Referencia criada a partir de projeto real de UBS.',
+        sections: [
+          {
+            title: 'Motivo da promocao',
+            body: 'Projeto com bom nivel de rastreabilidade e compatibilizacao entre disciplinas.',
+          },
+          {
+            title: 'Quando usar esta referencia',
+            body: 'Usar em novos projetos de UBS com escopo semelhante.',
+          },
+          {
+            title: 'Alertas e observacoes',
+            body: 'Revisar compatibilizacao e conferencias de quantitativos antes da entrega.',
+          },
+        ],
+        metadata: {
+          source: 'project',
+          sourceProjectId: projects[1].id,
+          sourceProjectName: 'Construcao da UBS Vila Esperanca',
+          sourceProjectType: 'unidade de saude',
+        },
       },
       publishedAt: now,
     },
@@ -688,7 +707,27 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       status: 'published',
       tags: ['escola', 'reforma', 'acessibilidade', 'projeto-referencia'],
       content: {
-        sourceProjectName: 'Reforma da Escola Municipal Jardim Primavera',
+        summary: 'Referencia criada a partir de projeto real de reforma escolar.',
+        sections: [
+          {
+            title: 'Motivo da promocao',
+            body: 'Projeto bem estruturado, com memorial consistente e fluxo de revisao rastreavel.',
+          },
+          {
+            title: 'Quando usar esta referencia',
+            body: 'Usar como base em reformas escolares com foco em acessibilidade.',
+          },
+          {
+            title: 'Alertas e observacoes',
+            body: 'Validar cobertura e compatibilidade entre memorial e orcamento.',
+          },
+        ],
+        metadata: {
+          source: 'project',
+          sourceProjectId: projects[0].id,
+          sourceProjectName: 'Reforma da Escola Municipal Jardim Primavera',
+          sourceProjectType: 'reforma escolar',
+        },
       },
       publishedAt: now,
     },
@@ -700,8 +739,38 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       status: 'published',
       tags: ['orcamento', 'ubs', 'quantitativos', 'licao-aprendida'],
       content: {
-        trigger: 'Revisao R01 reprovada por divergencia de area de piso.',
-        prevention: 'Checklist de conferencias cruzadas antes da revisao final.',
+        summary: 'Licao aprendida registrada a partir de revisao reprovada.',
+        sections: [
+          {
+            title: 'Contexto',
+            body: 'Durante a revisao do orcamento da UBS Vila Esperanca.',
+          },
+          {
+            title: 'Problema identificado',
+            body: 'Quantitativos de piso e revestimento nao batiam com memorial.',
+          },
+          {
+            title: 'Impacto',
+            body: 'Reprovacao da revisao e atraso na entrega.',
+          },
+          {
+            title: 'Recomendacao',
+            body: 'Comparar quantitativos principais com memorial e pranchas antes do envio.',
+          },
+          {
+            title: 'Quando observar novamente',
+            body: 'Projetos de UBS e reformas com orcamento por ambiente.',
+          },
+        ],
+        metadata: {
+          source: 'review',
+          sourceReviewId: uuidFromText('review:orcamento-r01'),
+          sourceReviewStatus: 'rejected',
+          sourceProjectId: projects[1].id,
+          sourceProjectName: 'Construcao da UBS Vila Esperanca',
+          sourceDeliverableName: 'Orcamento',
+          sourceDocumentTitle: 'Planilha Orcamentaria - UBS Vila Esperanca',
+        },
       },
       publishedAt: now,
     },
@@ -726,7 +795,24 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       status: 'published',
       tags: ['checklist', 'revisao', 'orcamento'],
       content: {
-        steps: ['conferencia de quantitativos', 'conferencia de composicoes', 'validacao de premissas'],
+        summary: 'Checklist para revisar orcamento antes de envio ao cliente.',
+        sections: [
+          {
+            title: 'Quando usar',
+            body: 'Usar antes de enviar orcamento para revisao tecnica, cliente ou prefeitura.',
+          },
+          {
+            title: 'Etapa indicada',
+            body: 'Pre-entrega do orcamento e revisao final de quantitativos.',
+          },
+        ],
+        checklist: [
+          { label: 'Conferir quantitativos principais.', required: true },
+          { label: 'Comparar orcamento com memorial descritivo.', required: true },
+          { label: 'Validar unidades de medida.', required: true },
+          { label: 'Conferir itens sem preco ou com preco zerado.', required: true },
+          { label: 'Validar data-base e BDI.', required: true },
+        ],
       },
       publishedAt: now,
     },
@@ -738,7 +824,27 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
       status: 'archived',
       tags: ['entrega', 'prefeitura', 'pacote-final'],
       content: {
-        packageStructure: ['01-memorial', '02-pranchas', '03-orcamento', '04-cronograma', '05-art-rrt'],
+        summary: 'Padrao para organizar pacote tecnico antes de envio para prefeitura.',
+        sections: [
+          {
+            title: 'Padrao de entrega',
+            body: 'Pacote tecnico com documentos finais, memoriais, orcamento e cronograma.',
+          },
+          {
+            title: 'Formato de envio',
+            body: 'Arquivos finais em PDF com nomenclatura padronizada e revisao identificada.',
+          },
+          {
+            title: 'Conferencias antes da entrega',
+            body: 'Confirmar versoes oficiais e ausencia de revisoes pendentes.',
+          },
+        ],
+        checklist: [
+          { label: 'Confirmar versao oficial dos documentos.', required: true },
+          { label: 'Conferir nomenclatura dos arquivos.', required: true },
+          { label: 'Verificar ART/RRT.', required: true },
+          { label: 'Conferir pendencias de revisao.', required: true },
+        ],
       },
       publishedAt: now,
       archivedAt: now,
@@ -788,6 +894,92 @@ async function seedKnowledgeBase(query: Query): Promise<void> {
         item.publishedAt ?? null,
         item.archivedAt ?? null,
         item.deprecatedAt ?? null,
+      ],
+    );
+  }
+}
+
+async function seedKnowledgeRelations(query: Query): Promise<void> {
+  const relations = [
+    {
+      key: 'kb-rel:project-ref-escola-based-on-project',
+      knowledgeKey: 'kb:project-reference:escola-jardim-primavera',
+      relationType: 'based_on',
+      targetType: 'project',
+      targetId: projects[0].id,
+    },
+    {
+      key: 'kb-rel:project-ref-ubs-based-on-project',
+      knowledgeKey: 'kb:project-reference:ubs-vila-esperanca',
+      relationType: 'based_on',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:document-model-memorial-based-on-document',
+      knowledgeKey: 'kb:document-model:memorial-reforma-escolar',
+      relationType: 'based_on',
+      targetType: 'document',
+      targetId: uuidFromText(`document:${projects[0].id}:Memorial Descritivo - Reforma Escolar`),
+    },
+    {
+      key: 'kb-rel:lesson-from-review-orcamento-r01',
+      knowledgeKey: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      relationType: 'lesson_from',
+      targetType: 'review',
+      targetId: uuidFromText('review:orcamento-r01'),
+    },
+    {
+      key: 'kb-rel:lesson-from-project-ubs',
+      knowledgeKey: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      relationType: 'lesson_from',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:checklist-for-project-ubs',
+      knowledgeKey: 'kb:review-checklist:revisao-orcamento',
+      relationType: 'checklist_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:standard-for-project-ubs',
+      knowledgeKey: 'kb:technical-standard:organizacao-disciplinas-ubs',
+      relationType: 'standard_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:delivery-standard-for-project-ubs',
+      knowledgeKey: 'kb:delivery-standard:pacote-tecnico-prefeitura',
+      relationType: 'standard_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+  ];
+
+  for (const relation of relations) {
+    await query(
+      `
+        INSERT INTO knowledge_relations (
+          id, organization_id, knowledge_item_id, target_type, target_id, relation_type, created_by, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
+        ON CONFLICT (id) DO UPDATE SET
+          target_type = EXCLUDED.target_type,
+          target_id = EXCLUDED.target_id,
+          relation_type = EXCLUDED.relation_type,
+          updated_at = now()
+      `,
+      [
+        uuidFromText(relation.key),
+        organizationId,
+        uuidFromText(relation.knowledgeKey),
+        relation.targetType,
+        relation.targetId,
+        relation.relationType,
+        'Lucas Eduardo',
       ],
     );
   }
@@ -869,6 +1061,7 @@ async function main(): Promise<void> {
       await seedProjectsAndDeliverables(query);
       await seedDocumentsAndReviews(query);
       await seedKnowledgeBase(query);
+      await seedKnowledgeRelations(query);
       await seedActivityLog(query);
     });
 
