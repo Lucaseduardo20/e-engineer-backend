@@ -41,6 +41,8 @@ import { CreateReviewDto } from '../dto/create-review.dto';
 import { DecideReviewDto } from '../dto/decide-review.dto';
 import { ListReviewsQueryDto } from '../dto/list-reviews-query.dto';
 import { ReviewResponseDto } from '../dto/review-response.dto';
+import { RegisterReviewAsLessonLearnedUseCase } from '../../application/use-cases/register-review-as-lesson-learned.use-case';
+import { RegisterReviewLessonDto } from '../dto/register-review-lesson.dto';
 
 @ApiTags('reviews')
 @ApiBearerAuth()
@@ -54,6 +56,7 @@ export class ReviewsController {
     private readonly approveReviewUseCase: ApproveReviewUseCase,
     private readonly rejectReviewUseCase: RejectReviewUseCase,
     private readonly addReviewCommentUseCase: AddReviewCommentUseCase,
+    private readonly registerReviewAsLessonLearnedUseCase: RegisterReviewAsLessonLearnedUseCase,
     private readonly audit: AuditQueryService,
   ) {}
 
@@ -207,6 +210,23 @@ export class ReviewsController {
     });
 
     return ok(comment);
+  }
+
+  @Post(':id/register-lesson-learned')
+  @ApiCreatedResponse({ description: 'Licao aprendida registrada a partir da revisao.' })
+  async registerLessonLearned(
+    @Param('id') id: string,
+    @Body() body: RegisterReviewLessonDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<unknown>> {
+    const result = await this.registerReviewAsLessonLearnedUseCase.execute({
+      ...body,
+      organizationId: request.user.organizationId,
+      reviewId: id,
+      createdBy: request.user.userId,
+    });
+    if (result.isFail()) this.throwResultError(result.unwrapError());
+    return ok(result.unwrap());
   }
 
   private throwResultError(error: Error): never {
