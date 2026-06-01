@@ -36,6 +36,10 @@ import { UpdateProjectStatusDto } from '../dto/update-project-status.dto';
 import { CreateProjectOutputDto } from '../../application/dto/create-project.dto';
 import { UpdateProjectStatusUseCase } from '../../application/use-cases/update-project-status.use-case';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
+import { ListProjectKnowledgeItemsUseCase } from '../../application/use-cases/list-project-knowledge-items.use-case';
+import { LinkKnowledgeItemToProjectUseCase } from '../../application/use-cases/link-knowledge-item-to-project.use-case';
+import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cases/unlink-knowledge-item-from-project.use-case';
+import { LinkProjectKnowledgeDto } from '../dto/link-project-knowledge.dto';
 
 @ApiTags('projects')
 @ApiBearerAuth()
@@ -48,6 +52,9 @@ export class ProjectsController {
     private readonly getProjectDetailUseCase: GetProjectDetailUseCase,
     private readonly updateProjectStatusUseCase: UpdateProjectStatusUseCase,
     private readonly audit: AuditQueryService,
+    private readonly listProjectKnowledgeItemsUseCase: ListProjectKnowledgeItemsUseCase,
+    private readonly linkKnowledgeItemToProjectUseCase: LinkKnowledgeItemToProjectUseCase,
+    private readonly unlinkKnowledgeItemFromProjectUseCase: UnlinkKnowledgeItemFromProjectUseCase,
   ) {}
 
   @Get()
@@ -83,6 +90,73 @@ export class ProjectsController {
     }
 
     return ok(project);
+  }
+
+
+  @Get(':id/knowledge')
+  @ApiOkResponse({ description: 'Conhecimento aplicado ao projeto.' })
+  async listKnowledge(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ items: unknown[] }>> {
+    const result = await this.listProjectKnowledgeItemsUseCase.execute({
+      organizationId: request.user.organizationId,
+      projectId: id,
+    });
+
+    if (!result) {
+      throw new NotFoundException('Project not found.');
+    }
+
+    return ok(result);
+  }
+
+  @Post(':id/knowledge')
+  @ApiCreatedResponse({ description: 'Knowledge item vinculado ao projeto.' })
+  async linkKnowledge(
+    @Param('id') id: string,
+    @Body() body: LinkProjectKnowledgeDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<unknown>> {
+    const result = await this.linkKnowledgeItemToProjectUseCase.execute({
+      organizationId: request.user.organizationId,
+      projectId: id,
+      knowledgeItemId: body.knowledgeItemId,
+      relationType: body.relationType,
+      linkedBy: request.user.userId,
+    });
+
+    if (result.isFail()) {
+      throw new BadRequestException(result.unwrapError().message);
+    }
+
+    return ok(result.unwrap());
+  }
+
+  @Post(':id/knowledge/:relationId/remove')
+  @ApiOkResponse({
+    description: 'Vinculo de conhecimento removido do projeto.',
+  })
+  async unlinkKnowledge(
+    @Param('id') id: string,
+    @Param('relationId') relationId: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ removed: true }>> {
+    const result = await this.unlinkKnowledgeItemFromProjectUseCase.execute({
+      organizationId: request.user.organizationId,
+      projectId: id,
+      relationId,
+    });
+
+    if (result.isFail()) {
+      const error = result.unwrapError();
+      if (error.message === 'Project not found.') {
+        throw new NotFoundException(error.message);
+      }
+      throw new BadRequestException(error.message);
+    }
+
+    return ok(result.unwrap());
   }
 
   @Post()
