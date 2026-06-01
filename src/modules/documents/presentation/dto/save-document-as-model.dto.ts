@@ -1,6 +1,6 @@
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
-export class PromoteProjectToKnowledgeDto {
+export class SaveDocumentAsModelDto {
   @IsString()
   @MaxLength(180)
   title!: string;
@@ -15,10 +15,6 @@ export class PromoteProjectToKnowledgeDto {
   @IsString({ each: true })
   tags?: string[];
 
-  @IsString()
-  @MaxLength(4000)
-  reason!: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(4000)
@@ -27,5 +23,10 @@ export class PromoteProjectToKnowledgeDto {
   @IsOptional()
   @IsString()
   @MaxLength(4000)
-  warnings?: string;
+  notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  allowNonOfficial?: boolean;
 }
+

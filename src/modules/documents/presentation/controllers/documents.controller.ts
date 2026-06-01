@@ -45,6 +45,8 @@ import { DocumentResponseDto } from '../dto/document-response.dto';
 import { ListDocumentsQueryDto } from '../dto/list-documents-query.dto';
 import { UpdateDocumentDto } from '../dto/update-document.dto';
 import { UploadDocumentDto } from '../dto/upload-document.dto';
+import { SaveDocumentAsModelDto } from '../dto/save-document-as-model.dto';
+import { SaveDocumentAsKnowledgeModelUseCase } from '../../application/use-cases/save-document-as-knowledge-model.use-case';
 
 interface UploadedDocumentFile {
   originalname: string;
@@ -65,6 +67,7 @@ export class DocumentsController {
     private readonly updateDocumentUseCase: UpdateDocumentUseCase,
     private readonly deleteDocumentUseCase: DeleteDocumentUseCase,
     private readonly uploadDocumentVersionUseCase: UploadDocumentVersionUseCase,
+    private readonly saveDocumentAsKnowledgeModelUseCase: SaveDocumentAsKnowledgeModelUseCase,
   ) {}
 
   @Get()
@@ -224,6 +227,48 @@ export class DocumentsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ApiResponse<DocumentResponseDto>> {
     return this.uploadVersion(id, file, body, request);
+  }
+
+  @Post(':id/save-as-model')
+  @ApiCreatedResponse({ description: 'Documento salvo como modelo de conhecimento.' })
+  async saveAsModel(
+    @Param('id') id: string,
+    @Body() body: SaveDocumentAsModelDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ item: unknown; warning?: string }>> {
+    const result = await this.saveDocumentAsKnowledgeModelUseCase.execute({
+      ...body,
+      organizationId: request.user.organizationId,
+      documentId: id,
+      createdBy: request.user.userId,
+    });
+
+    if (result.isFail()) {
+      this.throwResultError(result.unwrapError());
+    }
+
+    return ok(result.unwrap());
+  }
+
+  @Post(':id/versions/:versionId/save-as-model')
+  @ApiCreatedResponse({
+    description: 'Versao oficial de documento salva como modelo de conhecimento.',
+  })
+  async saveVersionAsModel(
+    @Param('id') id: string,
+    @Param('versionId') versionId: string,
+    @Body() body: SaveDocumentAsModelDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ item: unknown; warning?: string }>> {
+    const result = await this.saveDocumentAsKnowledgeModelUseCase.execute({
+      ...body,
+      organizationId: request.user.organizationId,
+      documentId: id,
+      documentVersionId: versionId,
+      createdBy: request.user.userId,
+    });
+    if (result.isFail()) this.throwResultError(result.unwrapError());
+    return ok(result.unwrap());
   }
 
   private throwResultError(error: Error): never {

@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
+import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure/repositories/knowledge-item.repository';
+import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-attachment.orm-entity';
+import { KnowledgeItemOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item.orm-entity';
+import { KnowledgeRelationOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-relation.orm-entity';
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
 import { CreateDocumentUseCase } from './application/use-cases/create-document.use-case';
@@ -14,6 +19,7 @@ import { DocumentVersionOrmEntity } from './infrastructure/persistence/typeorm/d
 import { TypeOrmDocumentRepository } from './infrastructure/repositories/document.repository';
 import { S3StorageService } from './infrastructure/storage/s3-storage.service';
 import { DocumentsController } from './presentation/controllers/documents.controller';
+import { SaveDocumentAsKnowledgeModelUseCase } from './application/use-cases/save-document-as-knowledge-model.use-case';
 
 @Module({
   imports: [
@@ -22,6 +28,9 @@ import { DocumentsController } from './presentation/controllers/documents.contro
       DocumentVersionOrmEntity,
       ProjectOrmEntity,
       DeliverableOrmEntity,
+      KnowledgeItemOrmEntity,
+      KnowledgeRelationOrmEntity,
+      KnowledgeAttachmentOrmEntity,
     ]),
   ],
   controllers: [DocumentsController],
@@ -32,10 +41,15 @@ import { DocumentsController } from './presentation/controllers/documents.contro
     UpdateDocumentUseCase,
     DeleteDocumentUseCase,
     UploadDocumentVersionUseCase,
+    SaveDocumentAsKnowledgeModelUseCase,
     S3StorageService,
     {
       provide: DOCUMENT_REPOSITORY,
       useClass: TypeOrmDocumentRepository,
+    },
+    {
+      provide: KNOWLEDGE_ITEM_REPOSITORY,
+      useClass: TypeOrmKnowledgeItemRepository,
     },
   ],
 })

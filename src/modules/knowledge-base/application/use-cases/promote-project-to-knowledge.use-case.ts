@@ -33,9 +33,9 @@ export class PromoteProjectToKnowledgeUseCase {
     title: string;
     description?: string | null;
     tags?: string[];
-    selectedDeliverableIds?: string[];
-    lessonsLearned?: string[];
-    warnings?: string[];
+    reason: string;
+    whenToUse?: string;
+    warnings?: string;
   }): Promise<Result<KnowledgeItemResponse, Error>> {
     try {
       const organizationId = OrganizationId.create(input.organizationId);
@@ -49,6 +49,12 @@ export class PromoteProjectToKnowledgeUseCase {
       if (!projectExists) {
         throw new Error('Project not found.');
       }
+      if (!input.title?.trim()) {
+        throw new Error('Title is required.');
+      }
+      if (!input.reason?.trim()) {
+        throw new Error('Reason is required.');
+      }
 
       const item = KnowledgeItem.create({
         organizationId,
@@ -58,10 +64,23 @@ export class PromoteProjectToKnowledgeUseCase {
         type: KnowledgeItemType.create('project_reference'),
         tags: input.tags,
         content: {
-          sourceProjectId: input.projectId,
-          reusableDeliverables: input.selectedDeliverableIds ?? [],
-          lessonsLearned: input.lessonsLearned ?? [],
-          warnings: input.warnings ?? [],
+          summary: `Referencia criada a partir do projeto ${input.title.trim()}.`,
+          sections: [
+            { title: 'Motivo da promocao', body: input.reason.trim() },
+            {
+              title: 'Quando usar esta referencia',
+              body: input.whenToUse?.trim() || 'Nao informado.',
+            },
+            {
+              title: 'Alertas e observacoes',
+              body: input.warnings?.trim() || 'Nenhum alerta informado.',
+            },
+          ],
+          checklist: [],
+          metadata: {
+            source: 'project',
+            sourceProjectId: input.projectId,
+          },
         },
       });
       const relation = KnowledgeRelation.create({
@@ -69,7 +88,7 @@ export class PromoteProjectToKnowledgeUseCase {
         knowledgeItemId: new UniqueEntityId(item.id),
         targetType: 'project',
         targetId: projectId,
-        relationType: 'generated_from',
+        relationType: 'based_on',
         createdBy: input.createdBy,
       });
 
