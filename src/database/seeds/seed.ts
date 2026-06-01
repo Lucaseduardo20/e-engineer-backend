@@ -34,6 +34,19 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+function normalizeTechnicalTagSlug(value: string): string {
+  return value
+    .trim()
+    .replace(/\./g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function deliverableTypeFromName(name: string): string {
   const normalized = name
     .normalize('NFD')
@@ -1062,6 +1075,47 @@ async function seedActivityLog(query: Query): Promise<void> {
   }
 }
 
+async function seedTechnicalTags(query: Query): Promise<void> {
+  const creator = 'admin@engflow.local';
+  const seedByCategory: Array<{ category: string; names: string[] }> = [
+    { category: 'project_type', names: ['UBS', 'Reforma escolar', 'Praca publica', 'Pavimentacao', 'Drenagem', 'Obra publica'] },
+    { category: 'technical_discipline', names: ['Arquitetura', 'Estrutura', 'Hidraulica', 'Eletrica', 'Orcamento', 'Cronograma', 'Acessibilidade'] },
+    { category: 'document_type', names: ['Memorial descritivo', 'Relatorio fotografico', 'Planilha orcamentaria', 'Cronograma fisico-financeiro', 'ART/RRT', 'Prancha tecnica'] },
+    { category: 'operational_pain', names: ['Retrabalho', 'Revisao reprovada', 'Quantitativos divergentes', 'Nomenclatura incorreta', 'Falta de compatibilizacao', 'Documento incompleto', 'Versao errada'] },
+    { category: 'client_context', names: ['Prefeitura SP', 'Orgao publico', 'Licitacao', 'Contrato publico', 'Zeladoria urbana'] },
+    { category: 'project_stage', names: ['Levantamento', 'Projeto basico', 'Projeto executivo', 'Revisao', 'Entrega final', 'Pos-entrega'] },
+    { category: 'knowledge_purpose', names: ['Padrao tecnico', 'Documento modelo', 'Projeto de referencia', 'Licao aprendida', 'Checklist de revisao', 'Padrao de entrega'] },
+  ];
+
+  for (const group of seedByCategory) {
+    for (const name of group.names) {
+      const slug = normalizeTechnicalTagSlug(name);
+      await query(
+        `
+          INSERT INTO technical_tags (
+            id, organization_id, name, slug, category, description, status, created_by, updated_by, created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7, now(), now())
+          ON CONFLICT (organization_id, slug) DO UPDATE SET
+            name = EXCLUDED.name,
+            category = EXCLUDED.category,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = now()
+        `,
+        [
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          organizationId,
+          name,
+          slug,
+          group.category,
+          null,
+          creator,
+        ],
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await dataSource.initialize();
 
@@ -1076,6 +1130,7 @@ async function main(): Promise<void> {
       await seedDocumentsAndReviews(query);
       await seedKnowledgeBase(query);
       await seedKnowledgeRelations(query);
+      await seedTechnicalTags(query);
       await seedActivityLog(query);
     });
 

@@ -13,6 +13,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { PriorityRequestsModule } from './modules/priority-requests/priority-requests.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { TechnicalTaxonomyModule } from './modules/technical-taxonomy/technical-taxonomy.module';
 import { validateEnv } from './shared/infrastructure/config/env.validation';
 import { createTypeOrmOptions } from './shared/infrastructure/database/typeorm.config';
 import { SharedInfrastructureModule } from './shared/infrastructure/shared-infrastructure.module';
@@ -38,6 +39,7 @@ import { SharedInfrastructureModule } from './shared/infrastructure/shared-infra
     DocumentsModule,
     ReviewsModule,
     KnowledgeBaseModule,
+    TechnicalTaxonomyModule,
     AuditModule,
   ],
   controllers: [AppController],
