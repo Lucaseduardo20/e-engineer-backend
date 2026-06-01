@@ -3,6 +3,12 @@ import { TenantScopedOrmEntity } from '../../../../../shared/infrastructure/pers
 
 @Entity('activity_logs')
 export class ActivityLogOrmEntity extends TenantScopedOrmEntity {
+  @Column({ name: 'actor_id', type: 'varchar', length: 120, nullable: true })
+  actorId!: string | null;
+
+  @Column({ name: 'actor_display_name', type: 'varchar', length: 120, nullable: true })
+  actorDisplayName!: string | null;
+
   @Column({ name: 'actor_name', type: 'varchar', length: 120 })
   actorName!: string;
 

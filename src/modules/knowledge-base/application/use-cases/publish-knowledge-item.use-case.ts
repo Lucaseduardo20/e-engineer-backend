@@ -12,6 +12,7 @@ import {
   type KnowledgeItemResponse,
 } from '../../domain/repositories/knowledge-item.repository';
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class PublishKnowledgeItemUseCase {
@@ -47,6 +48,7 @@ export class PublishKnowledgeItemUseCase {
     private readonly knowledgeItems: KnowledgeItemRepository,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly events: DomainEventPublisher,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -76,6 +78,14 @@ export class PublishKnowledgeItemUseCase {
       item.publish(input.publishedBy);
       await this.knowledgeItems.save(item);
       await this.events.publishAll(item.pullDomainEvents());
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.publishedBy,
+        action: 'knowledge_item.published',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Item de conhecimento publicado: ${item.title}`,
+      });
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {

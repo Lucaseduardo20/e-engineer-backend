@@ -24,6 +24,12 @@ export class AuditController {
         organizationId: request.user.organizationId,
         page: query.page,
         pageSize: query.pageSize,
+        entityType: typeof (query as Record<string, unknown>).entityType === 'string'
+          ? String((query as Record<string, unknown>).entityType)
+          : undefined,
+        entityId: typeof (query as Record<string, unknown>).entityId === 'string'
+          ? String((query as Record<string, unknown>).entityId)
+          : undefined,
       }),
     );
   }

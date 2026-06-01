@@ -13,6 +13,7 @@ import {
 } from '../../domain/repositories/knowledge-item.repository';
 import { KnowledgeItemType } from '../../domain/value-objects/knowledge-item-type.vo';
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 export interface CreateKnowledgeItemInput {
   organizationId: string;
@@ -31,6 +32,7 @@ export class CreateKnowledgeItemUseCase {
     private readonly knowledgeItems: KnowledgeItemRepository,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly events: DomainEventPublisher,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(
@@ -49,6 +51,15 @@ export class CreateKnowledgeItemUseCase {
 
       await this.knowledgeItems.save(item);
       await this.events.publishAll(item.pullDomainEvents());
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.createdBy,
+        action: 'knowledge_item.created',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Item de conhecimento criado: ${item.title}`,
+        metadata: { knowledgeItemType: item.type.value, knowledgeItemStatus: item.status.value },
+      });
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {

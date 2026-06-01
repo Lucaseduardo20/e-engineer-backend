@@ -122,11 +122,14 @@ export interface ReviewComment {
 
 export interface AuditLogEntry {
   id: string;
+  actorId?: string | null;
+  actorDisplayName?: string | null;
   actorName: string;
   action: string;
   entityType: string;
   entityId?: string | null;
   description: string;
+  metadata?: Record<string, unknown>;
   occurredAt: string;
 }
 

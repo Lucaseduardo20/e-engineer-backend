@@ -15,6 +15,7 @@ import {
   REVIEW_REPOSITORY,
   type ReviewRepository,
 } from '../../domain/repositories/review.repository';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class RegisterReviewAsLessonLearnedUseCase {
@@ -22,6 +23,7 @@ export class RegisterReviewAsLessonLearnedUseCase {
     @Inject(REVIEW_REPOSITORY) private readonly reviews: ReviewRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -88,10 +90,18 @@ export class RegisterReviewAsLessonLearnedUseCase {
 
       await this.knowledgeItems.save(item);
       await this.knowledgeItems.saveRelation(relation);
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.createdBy,
+        action: 'knowledge_item.created_from_review',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Revisao registrada como licao aprendida: ${item.title}`,
+        metadata: { sourceReviewId: review.id, sourceReviewStatus: review.status.value },
+      });
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {
       return Result.fail(error instanceof Error ? error : new Error(String(error)));
     }
   }
 }
-

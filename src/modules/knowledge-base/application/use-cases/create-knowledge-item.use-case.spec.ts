@@ -1,6 +1,7 @@
 import { CreateKnowledgeItemUseCase } from './create-knowledge-item.use-case';
 import type { DomainEventPublisher } from '../../../../shared/application/ports/domain-event-publisher';
 import type { KnowledgeItemRepository } from '../../domain/repositories/knowledge-item.repository';
+import type { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 describe('CreateKnowledgeItemUseCase', () => {
   const repository = {
@@ -9,13 +10,16 @@ describe('CreateKnowledgeItemUseCase', () => {
   const events = {
     publishAll: jest.fn(),
   } as unknown as jest.Mocked<DomainEventPublisher>;
+  const audit = {
+    record: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<AuditQueryService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('creates a valid draft item', async () => {
-    const useCase = new CreateKnowledgeItemUseCase(repository, events);
+    const useCase = new CreateKnowledgeItemUseCase(repository, events, audit);
 
     const result = await useCase.execute({
       organizationId: '11111111-1111-4111-8111-111111111111',
@@ -33,7 +37,7 @@ describe('CreateKnowledgeItemUseCase', () => {
   });
 
   it('fails for invalid payload', async () => {
-    const useCase = new CreateKnowledgeItemUseCase(repository, events);
+    const useCase = new CreateKnowledgeItemUseCase(repository, events, audit);
 
     const result = await useCase.execute({
       organizationId: '11111111-1111-4111-8111-111111111111',

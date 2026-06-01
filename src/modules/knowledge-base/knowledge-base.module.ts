@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedInfrastructureModule } from '../../shared/infrastructure/shared-infrastructure.module';
+import { AuditModule } from '../audit/audit.module';
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeorm/document.orm-entity';
 import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
@@ -34,6 +35,7 @@ import { KnowledgeBaseController } from './presentation/controllers/knowledge-ba
       DocumentOrmEntity,
     ]),
     SharedInfrastructureModule,
+    AuditModule,
   ],
   controllers: [KnowledgeBaseController],
   providers: [

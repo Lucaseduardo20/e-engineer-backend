@@ -16,6 +16,7 @@ import {
 } from '../../domain/repositories/knowledge-item.repository';
 import { KnowledgeItemType } from '../../domain/value-objects/knowledge-item-type.vo';
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class PromoteProjectToKnowledgeUseCase {
@@ -24,6 +25,7 @@ export class PromoteProjectToKnowledgeUseCase {
     private readonly knowledgeItems: KnowledgeItemRepository,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly events: DomainEventPublisher,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -102,6 +104,15 @@ export class PromoteProjectToKnowledgeUseCase {
           projectId: input.projectId,
         }),
       ]);
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.createdBy,
+        action: 'knowledge_item.created_from_project',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Projeto promovido como referencia: ${input.title}`,
+        metadata: { sourceProjectId: input.projectId, knowledgeItemType: 'project_reference' },
+      });
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {

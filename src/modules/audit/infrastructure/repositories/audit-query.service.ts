@@ -19,9 +19,14 @@ export class AuditQueryService {
     organizationId: string;
     page: number;
     pageSize: number;
+    entityType?: string;
+    entityId?: string;
   }): Promise<Paginated<AuditLogEntry>> {
+    const where: Record<string, unknown> = { organizationId: input.organizationId };
+    if (input.entityType) where.entityType = input.entityType;
+    if (input.entityId) where.entityId = input.entityId;
     const [items, total] = await this.activityLogs.findAndCount({
-      where: { organizationId: input.organizationId },
+      where,
       order: { occurredAt: 'DESC' },
       skip: (input.page - 1) * input.pageSize,
       take: input.pageSize,
@@ -30,11 +35,14 @@ export class AuditQueryService {
     return {
       items: items.map((item) => ({
         id: item.id,
+        actorId: item.actorId,
+        actorDisplayName: item.actorDisplayName,
         actorName: item.actorName,
         action: item.action,
         entityType: item.entityType,
         entityId: item.entityId,
         description: item.description,
+        metadata: item.metadata ?? {},
         occurredAt: item.occurredAt.toISOString(),
       })),
       total,
@@ -45,6 +53,8 @@ export class AuditQueryService {
 
   async record(input: {
     organizationId: string;
+    actorId?: string | null;
+    actorDisplayName?: string | null;
     actorName: string;
     action: string;
     entityType: string;
@@ -56,6 +66,8 @@ export class AuditQueryService {
       id: randomUUID(),
       organizationId: input.organizationId,
       actorName: input.actorName,
+      actorId: input.actorId ?? null,
+      actorDisplayName: input.actorDisplayName ?? input.actorName,
       action: input.action,
       entityType: input.entityType,
       entityId: input.entityId ?? null,

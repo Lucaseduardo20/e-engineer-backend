@@ -15,6 +15,7 @@ import {
   DOCUMENT_REPOSITORY,
   type DocumentRepository,
 } from '../../domain/repositories/document.repository';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class SaveDocumentAsKnowledgeModelUseCase {
@@ -23,6 +24,7 @@ export class SaveDocumentAsKnowledgeModelUseCase {
     private readonly documents: DocumentRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -103,6 +105,18 @@ export class SaveDocumentAsKnowledgeModelUseCase {
 
       await this.knowledgeItems.save(item);
       await this.knowledgeItems.saveRelation(relation);
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.createdBy,
+        action: 'knowledge_item.created_from_document',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Documento salvo como modelo: ${document.title}`,
+        metadata: {
+          sourceDocumentId: document.id,
+          sourceDocumentVersionId: sourceVersion?.id.toString() ?? null,
+        },
+      });
 
       return Result.ok({
         item: KnowledgeItemMapper.toResponse(item),

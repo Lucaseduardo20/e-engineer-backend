@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditModule } from '../audit/audit.module';
 import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
 import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure/repositories/knowledge-item.repository';
 import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-attachment.orm-entity';
@@ -32,6 +33,7 @@ import { SaveDocumentAsKnowledgeModelUseCase } from './application/use-cases/sav
       KnowledgeRelationOrmEntity,
       KnowledgeAttachmentOrmEntity,
     ]),
+    AuditModule,
   ],
   controllers: [DocumentsController],
   providers: [

@@ -13,6 +13,7 @@ import {
   PROJECT_REPOSITORY,
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class LinkKnowledgeItemToProjectUseCase {
@@ -21,6 +22,7 @@ export class LinkKnowledgeItemToProjectUseCase {
     private readonly projects: ProjectRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -80,6 +82,18 @@ export class LinkKnowledgeItemToProjectUseCase {
       });
 
       await this.knowledgeItems.saveRelation(relation);
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.linkedBy,
+        action: 'knowledge_item.linked_to_project',
+        entityType: 'knowledge_item',
+        entityId: input.knowledgeItemId,
+        description: `Conhecimento vinculado ao projeto: ${item.title}`,
+        metadata: {
+          projectId: input.projectId,
+          relationType: input.relationType,
+        },
+      });
 
       return Result.ok(KnowledgeItemMapper.relationToResponse(relation));
     } catch (error) {

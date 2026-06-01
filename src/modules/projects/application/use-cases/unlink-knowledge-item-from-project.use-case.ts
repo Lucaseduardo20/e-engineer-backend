@@ -10,6 +10,7 @@ import {
   PROJECT_REPOSITORY,
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class UnlinkKnowledgeItemFromProjectUseCase {
@@ -18,6 +19,7 @@ export class UnlinkKnowledgeItemFromProjectUseCase {
     private readonly projects: ProjectRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -69,6 +71,15 @@ export class UnlinkKnowledgeItemFromProjectUseCase {
         relationId: new UniqueEntityId(input.relationId),
         knowledgeItemId: new UniqueEntityId(knowledgeItemId),
         organizationId,
+      });
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: 'system',
+        action: 'knowledge_item.unlinked_from_project',
+        entityType: 'knowledge_item',
+        entityId: knowledgeItemId,
+        description: 'Conhecimento removido do projeto.',
+        metadata: { projectId: input.projectId, relationId: input.relationId },
       });
 
       return Result.ok({ removed: true });

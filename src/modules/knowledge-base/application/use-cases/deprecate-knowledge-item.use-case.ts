@@ -12,6 +12,7 @@ import {
   type KnowledgeItemResponse,
 } from '../../domain/repositories/knowledge-item.repository';
 import { KnowledgeItemMapper } from '../../infrastructure/mappers/knowledge-item.mapper';
+import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 
 @Injectable()
 export class DeprecateKnowledgeItemUseCase {
@@ -20,6 +21,7 @@ export class DeprecateKnowledgeItemUseCase {
     private readonly knowledgeItems: KnowledgeItemRepository,
     @Inject(DOMAIN_EVENT_PUBLISHER)
     private readonly events: DomainEventPublisher,
+    private readonly audit: AuditQueryService,
   ) {}
 
   async execute(input: {
@@ -40,6 +42,14 @@ export class DeprecateKnowledgeItemUseCase {
       item.deprecate(input.deprecatedBy);
       await this.knowledgeItems.save(item);
       await this.events.publishAll(item.pullDomainEvents());
+      await this.audit.record({
+        organizationId: input.organizationId,
+        actorName: input.deprecatedBy,
+        action: 'knowledge_item.deprecated',
+        entityType: 'knowledge_item',
+        entityId: item.id,
+        description: `Item de conhecimento marcado como obsoleto: ${item.title}`,
+      });
 
       return Result.ok(KnowledgeItemMapper.toResponse(item));
     } catch (error) {
