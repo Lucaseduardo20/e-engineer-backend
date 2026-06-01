@@ -198,7 +198,7 @@ export class KnowledgeBaseController {
   }
 
   @Post('knowledge-base/:id/deprecate')
-  @RequirePermissions(permissions.knowledge.publish)
+  @RequirePermissions(permissions.knowledge.deprecate)
   @ApiOkResponse({ description: 'Item da base marcado como obsoleto.' })
   async deprecate(
     @Param('id') id: string,
@@ -232,7 +232,7 @@ export class KnowledgeBaseController {
   }
 
   @Post('knowledge-base/:id/relations/:relationId/remove')
-  @RequirePermissions(permissions.knowledge.link)
+  @RequirePermissions(permissions.knowledge.unlink)
   @ApiOkResponse({ description: 'Relacao de conhecimento removida.' })
   async unlink(
     @Param('id') id: string,
@@ -249,7 +249,7 @@ export class KnowledgeBaseController {
   }
 
   @Post('projects/:projectId/promote-to-knowledge')
-  @RequirePermissions(permissions.knowledge.create, permissions.knowledge.link)
+  @RequirePermissions(permissions.knowledge.promoteProject)
   @ApiCreatedResponse({ description: 'Projeto promovido para referencia.' })
   async promoteProject(
     @Param('projectId') projectId: string,

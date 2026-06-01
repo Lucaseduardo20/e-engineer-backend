@@ -399,6 +399,8 @@ async function seedTemplates(query: Query): Promise<void> {
 }
 
 async function seedDocumentsAndReviews(query: Query): Promise<void> {
+  const documentVersionIdsByKey = new Map<string, string>();
+
   const documents = [
     {
       project: projects[0],
@@ -499,6 +501,13 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
           notes,
         ],
       );
+
+      const reviewLookupKey = [
+        documentData.project.id,
+        documentData.deliverableName,
+        revisionCode,
+      ].join('|');
+      documentVersionIdsByKey.set(reviewLookupKey, versionId);
     }
   }
 
@@ -558,12 +567,18 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
     const deliverableId = uuidFromText(
       `deliverable:${review.project.id}:${review.deliverable}`,
     );
-    const documentId = uuidFromText(
-      `document:${review.project.id}:${review.document}`,
-    );
-    const versionId = uuidFromText(
-      `document-version:${documentId}:${review.revision}`,
-    );
+    const versionLookupKey = [
+      review.project.id,
+      review.deliverable,
+      review.revision,
+    ].join('|');
+    const versionId = documentVersionIdsByKey.get(versionLookupKey);
+
+    if (!versionId) {
+      throw new Error(
+        `Seed review "${review.id}" references missing document version (${versionLookupKey}).`,
+      );
+    }
 
     await query(
       `
@@ -963,14 +978,13 @@ async function seedKnowledgeRelations(query: Query): Promise<void> {
     await query(
       `
         INSERT INTO knowledge_relations (
-          id, organization_id, knowledge_item_id, target_type, target_id, relation_type, created_by, created_at, updated_at
+          id, organization_id, knowledge_item_id, target_type, target_id, relation_type, created_by, created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, now())
         ON CONFLICT (id) DO UPDATE SET
           target_type = EXCLUDED.target_type,
           target_id = EXCLUDED.target_id,
-          relation_type = EXCLUDED.relation_type,
-          updated_at = now()
+          relation_type = EXCLUDED.relation_type
       `,
       [
         uuidFromText(relation.key),

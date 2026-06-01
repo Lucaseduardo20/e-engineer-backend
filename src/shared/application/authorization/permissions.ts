@@ -18,7 +18,12 @@ export const permissions = {
     update: 'knowledge.update',
     publish: 'knowledge.publish',
     archive: 'knowledge.archive',
+    deprecate: 'knowledge.deprecate',
     link: 'knowledge.link',
+    unlink: 'knowledge.unlink',
+    promoteProject: 'knowledge.promote_project',
+    saveDocumentModel: 'knowledge.save_document_model',
+    registerLesson: 'knowledge.register_lesson',
   },
   platform: {
     tenantsRead: 'platform.tenants.read',

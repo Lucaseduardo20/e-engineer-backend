@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SharedInfrastructureModule } from '../../shared/infrastructure/shared-infrastructure.module';
 import { AuditModule } from '../audit/audit.module';
 import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
 import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure/repositories/knowledge-item.repository';
@@ -24,6 +25,7 @@ import { SaveDocumentAsKnowledgeModelUseCase } from './application/use-cases/sav
 
 @Module({
   imports: [
+    SharedInfrastructureModule,
     TypeOrmModule.forFeature([
       DocumentOrmEntity,
       DocumentVersionOrmEntity,

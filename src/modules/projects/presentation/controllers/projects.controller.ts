@@ -18,6 +18,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../shared/infrastructure/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../../../shared/infrastructure/auth/permissions.guard';
+import { RequirePermissions } from '../../../../shared/infrastructure/auth/require-permissions.decorator';
+import { permissions } from '../../../../shared/application/authorization/permissions';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import {
   ok,
@@ -43,7 +46,7 @@ import { LinkProjectKnowledgeDto } from '../dto/link-project-knowledge.dto';
 
 @ApiTags('projects')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('projects')
 export class ProjectsController {
   constructor(
@@ -95,6 +98,7 @@ export class ProjectsController {
 
   @Get(':id/knowledge')
   @ApiOkResponse({ description: 'Conhecimento aplicado ao projeto.' })
+  @RequirePermissions(permissions.knowledge.read)
   async listKnowledge(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,
@@ -113,6 +117,7 @@ export class ProjectsController {
 
   @Post(':id/knowledge')
   @ApiCreatedResponse({ description: 'Knowledge item vinculado ao projeto.' })
+  @RequirePermissions(permissions.knowledge.link)
   async linkKnowledge(
     @Param('id') id: string,
     @Body() body: LinkProjectKnowledgeDto,
@@ -137,6 +142,7 @@ export class ProjectsController {
   @ApiOkResponse({
     description: 'Vinculo de conhecimento removido do projeto.',
   })
+  @RequirePermissions(permissions.knowledge.unlink)
   async unlinkKnowledge(
     @Param('id') id: string,
     @Param('relationId') relationId: string,

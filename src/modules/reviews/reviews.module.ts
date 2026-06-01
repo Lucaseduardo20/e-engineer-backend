@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SharedInfrastructureModule } from '../../shared/infrastructure/shared-infrastructure.module';
 import { AuditModule } from '../audit/audit.module';
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { DocumentVersionOrmEntity } from '../documents/infrastructure/persistence/typeorm/document-version.orm-entity';
@@ -28,6 +29,7 @@ import { ReviewsController } from './presentation/controllers/reviews.controller
 
 @Module({
   imports: [
+    SharedInfrastructureModule,
     TypeOrmModule.forFeature([
       ReviewOrmEntity,
       ReviewCommentOrmEntity,

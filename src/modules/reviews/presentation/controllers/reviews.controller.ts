@@ -25,6 +25,9 @@ import type {
 } from '../../../../shared/contracts/dashboard.contracts';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import { JwtAuthGuard } from '../../../../shared/infrastructure/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../../../shared/infrastructure/auth/permissions.guard';
+import { RequirePermissions } from '../../../../shared/infrastructure/auth/require-permissions.decorator';
+import { permissions } from '../../../../shared/application/authorization/permissions';
 import {
   ok,
   type ApiResponse,
@@ -46,7 +49,7 @@ import { RegisterReviewLessonDto } from '../dto/register-review-lesson.dto';
 
 @ApiTags('reviews')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('reviews')
 export class ReviewsController {
   constructor(
@@ -213,6 +216,7 @@ export class ReviewsController {
   }
 
   @Post(':id/register-lesson-learned')
+  @RequirePermissions(permissions.knowledge.registerLesson)
   @ApiCreatedResponse({ description: 'Licao aprendida registrada a partir da revisao.' })
   async registerLessonLearned(
     @Param('id') id: string,

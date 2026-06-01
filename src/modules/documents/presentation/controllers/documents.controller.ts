@@ -24,6 +24,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../../shared/infrastructure/auth/jwt-auth.guard';
+import { PermissionsGuard } from '../../../../shared/infrastructure/auth/permissions.guard';
+import { RequirePermissions } from '../../../../shared/infrastructure/auth/require-permissions.decorator';
+import { permissions } from '../../../../shared/application/authorization/permissions';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import {
   ok,
@@ -57,7 +60,7 @@ interface UploadedDocumentFile {
 
 @ApiTags('documents')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('documents')
 export class DocumentsController {
   constructor(
@@ -230,6 +233,7 @@ export class DocumentsController {
   }
 
   @Post(':id/save-as-model')
+  @RequirePermissions(permissions.knowledge.saveDocumentModel)
   @ApiCreatedResponse({ description: 'Documento salvo como modelo de conhecimento.' })
   async saveAsModel(
     @Param('id') id: string,
@@ -251,6 +255,7 @@ export class DocumentsController {
   }
 
   @Post(':id/versions/:versionId/save-as-model')
+  @RequirePermissions(permissions.knowledge.saveDocumentModel)
   @ApiCreatedResponse({
     description: 'Versao oficial de documento salva como modelo de conhecimento.',
   })
