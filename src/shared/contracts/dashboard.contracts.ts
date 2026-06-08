@@ -21,11 +21,15 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
+  client?: string | null;
+  projectType?: string | null;
+  responsibleName?: string | null;
   status: 'draft' | 'active' | 'paused' | 'completed' | 'archived';
   organizationId: string;
   startDate?: string;
   endDate?: string;
   progress: number;
+  tags?: string[];
   metrics?: Record<string, number>;
 }
 

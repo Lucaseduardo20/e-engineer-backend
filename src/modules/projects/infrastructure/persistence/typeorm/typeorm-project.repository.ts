@@ -110,9 +110,13 @@ export class TypeOrmProjectRepository
       id: project.id,
       name: project.name,
       description: project.client ?? undefined,
+      client: project.client,
+      projectType: project.projectType,
+      responsibleName: project.responsibleName,
       status: mapProjectStatus(project.status),
       organizationId: project.organizationId,
       progress: progressFromStatus(project.status),
+      tags: project.tags,
       metrics: {
         tags: project.tags.length,
       },
