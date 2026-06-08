@@ -14,6 +14,8 @@ import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure
 import { KnowledgeItemOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item.orm-entity';
 import { KnowledgeRelationOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-relation.orm-entity';
 import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-attachment.orm-entity';
+import { KnowledgeItemTagOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item-tag.orm-entity';
+import { TechnicalTagOrmEntity } from '../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository';
 import { ProjectOrmEntity } from './infrastructure/persistence/typeorm/project.orm-entity';
 import { TypeOrmProjectRepository } from './infrastructure/persistence/typeorm/typeorm-project.repository';
@@ -28,6 +30,8 @@ import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeo
       KnowledgeItemOrmEntity,
       KnowledgeRelationOrmEntity,
       KnowledgeAttachmentOrmEntity,
+      KnowledgeItemTagOrmEntity,
+      TechnicalTagOrmEntity,
       DeliverableOrmEntity,
       DocumentOrmEntity,
     ]),

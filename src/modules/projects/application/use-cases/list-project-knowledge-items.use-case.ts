@@ -22,7 +22,7 @@ export interface ProjectKnowledgeItem {
     description?: string | null;
     type: string;
     status: string;
-    tags: string[];
+    tags: Record<string, unknown>[];
     updatedAt: string;
     publishedAt?: string | null;
     archivedAt?: string | null;

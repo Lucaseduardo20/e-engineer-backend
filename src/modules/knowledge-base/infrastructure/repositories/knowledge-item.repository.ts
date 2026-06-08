@@ -232,9 +232,16 @@ export class TypeOrmKnowledgeItemRepository
     if (!itemIds.length) return map;
     const rows = await this.itemTags.createQueryBuilder('kit')
       .innerJoin(TechnicalTagOrmEntity, 'tt', 'tt.id = kit.tag_id AND tt.organization_id = kit.organization_id')
-      .select(['kit.knowledgeItemId as knowledgeItemId', 'tt.id as id', 'tt.name as name', 'tt.slug as slug', 'tt.category as category', 'tt.status as status'])
-      .where('kit.organizationId = :organizationId', { organizationId })
-      .andWhere('kit.knowledgeItemId IN (:...itemIds)', { itemIds })
+      .select([
+        'kit.knowledge_item_id as knowledgeItemId',
+        'tt.id as id',
+        'tt.name as name',
+        'tt.slug as slug',
+        'tt.category as category',
+        'tt.status as status',
+      ])
+      .where('kit.organization_id = :organizationId', { organizationId })
+      .andWhere('kit.knowledge_item_id IN (:...itemIds)', { itemIds })
       .getRawMany();
     for (const row of rows) {
       const list = map.get(row.knowledgeItemId) ?? [];

@@ -9,9 +9,11 @@ import { UserOrmEntity } from '../identity/infrastructure/persistence/typeorm/us
 import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
 import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-attachment.orm-entity';
 import { KnowledgeItemOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item.orm-entity';
+import { KnowledgeItemTagOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item-tag.orm-entity';
 import { KnowledgeRelationOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-relation.orm-entity';
 import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure/repositories/knowledge-item.repository';
 import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
+import { TechnicalTagOrmEntity } from '../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { AddReviewCommentUseCase } from './application/use-cases/add-review-comment.use-case';
 import { ApproveReviewUseCase } from './application/use-cases/approve-review.use-case';
 import { CreateReviewUseCase } from './application/use-cases/create-review.use-case';
@@ -41,6 +43,8 @@ import { ReviewsController } from './presentation/controllers/reviews.controller
       KnowledgeItemOrmEntity,
       KnowledgeRelationOrmEntity,
       KnowledgeAttachmentOrmEntity,
+      KnowledgeItemTagOrmEntity,
+      TechnicalTagOrmEntity,
     ]),
     AuditModule,
   ],

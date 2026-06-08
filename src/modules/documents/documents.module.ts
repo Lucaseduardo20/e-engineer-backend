@@ -7,6 +7,8 @@ import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure
 import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-attachment.orm-entity';
 import { KnowledgeItemOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item.orm-entity';
 import { KnowledgeRelationOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-relation.orm-entity';
+import { KnowledgeItemTagOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item-tag.orm-entity';
+import { TechnicalTagOrmEntity } from '../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { ProjectOrmEntity } from '../projects/infrastructure/persistence/typeorm/project.orm-entity';
 import { CreateDocumentUseCase } from './application/use-cases/create-document.use-case';
@@ -34,6 +36,8 @@ import { SaveDocumentAsKnowledgeModelUseCase } from './application/use-cases/sav
       KnowledgeItemOrmEntity,
       KnowledgeRelationOrmEntity,
       KnowledgeAttachmentOrmEntity,
+      KnowledgeItemTagOrmEntity,
+      TechnicalTagOrmEntity,
     ]),
     AuditModule,
   ],
