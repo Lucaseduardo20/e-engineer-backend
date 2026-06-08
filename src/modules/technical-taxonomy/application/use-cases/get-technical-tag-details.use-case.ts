@@ -12,7 +12,11 @@ export class GetTechnicalTagDetailsUseCase {
   ) {}
 
   async execute(input: { organizationId: string; id: string }): Promise<TechnicalTagResponse | null> {
-    const tag = await this.repository.findById(new UniqueEntityId(input.id), OrganizationId.create(input.organizationId));
-    return tag ? TechnicalTagResponseMapper.toResponse(tag) : null;
+    const organizationId = OrganizationId.create(input.organizationId);
+    const tag = await this.repository.findById(new UniqueEntityId(input.id), organizationId);
+    if (!tag) return null;
+
+    const usageCounts = await this.repository.countUsageByTagIds([tag.id], organizationId);
+    return TechnicalTagResponseMapper.toResponse(tag, usageCounts.get(tag.id) ?? 0);
   }
 }

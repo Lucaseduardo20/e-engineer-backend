@@ -62,4 +62,24 @@ export class TypeOrmTechnicalTagRepository
     if (filters.search) qb.andWhere('(tag.name ILIKE :q OR tag.slug ILIKE :q)', { q: `%${filters.search}%` });
     return qb.getCount();
   }
+
+  async countUsageByTagIds(
+    tagIds: string[],
+    organizationId: OrganizationId,
+  ): Promise<Map<string, number>> {
+    if (tagIds.length === 0) return new Map();
+
+    const rows = await this.repository.manager.query<Array<{ tag_id: string; usage_count: string }>>(
+      `
+        SELECT tag_id, COUNT(*)::text AS usage_count
+        FROM knowledge_item_tags
+        WHERE organization_id = $1
+          AND tag_id = ANY($2::uuid[])
+        GROUP BY tag_id
+      `,
+      [organizationId.toString(), tagIds],
+    );
+
+    return new Map(rows.map((row) => [row.tag_id, Number(row.usage_count)]));
+  }
 }

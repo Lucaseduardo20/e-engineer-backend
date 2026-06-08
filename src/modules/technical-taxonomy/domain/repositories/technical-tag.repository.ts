@@ -24,6 +24,7 @@ export interface TechnicalTagResponse {
   category: TechnicalTagCategoryValue;
   description: string | null;
   status: TechnicalTagStatusValue;
+  usageCount: number;
   createdBy: string;
   updatedBy: string | null;
   archivedAt: Date | null;
@@ -45,4 +46,8 @@ export interface TechnicalTagRepository {
   existsBySlug(slug: string, organizationId: OrganizationId): Promise<boolean>;
   findMany(filters: FindTechnicalTagsParams): Promise<TechnicalTag[]>;
   count(filters: FindTechnicalTagsParams): Promise<number>;
+  countUsageByTagIds(
+    tagIds: string[],
+    organizationId: OrganizationId,
+  ): Promise<Map<string, number>>;
 }

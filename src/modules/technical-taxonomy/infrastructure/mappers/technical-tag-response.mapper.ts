@@ -2,7 +2,7 @@ import type { TechnicalTagResponse } from '../../domain/repositories/technical-t
 import { TechnicalTag } from '../../domain/entities/technical-tag';
 
 export class TechnicalTagResponseMapper {
-  static toResponse(tag: TechnicalTag): TechnicalTagResponse {
+  static toResponse(tag: TechnicalTag, usageCount = 0): TechnicalTagResponse {
     return {
       id: tag.id,
       organizationId: tag.organizationId.toString(),
@@ -11,6 +11,7 @@ export class TechnicalTagResponseMapper {
       category: tag.category.value,
       description: tag.description,
       status: tag.status.value,
+      usageCount,
       createdBy: tag.createdBy,
       updatedBy: tag.updatedBy,
       archivedAt: tag.archivedAt,

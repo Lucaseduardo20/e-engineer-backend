@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Paginated } from '../../../../shared/contracts/dashboard.contracts';
+import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
 import { TECHNICAL_TAG_REPOSITORY, type TechnicalTagRepository, type TechnicalTagResponse } from '../../domain/repositories/technical-tag.repository';
 import type { TechnicalTagCategoryValue } from '../../domain/value-objects/technical-tag-category.vo';
 import type { TechnicalTagStatusValue } from '../../domain/value-objects/technical-tag-status.vo';
@@ -25,9 +26,13 @@ export class ListTechnicalTagsUseCase {
       this.repository.findMany(input),
       this.repository.count(input),
     ]);
+    const usageCounts = await this.repository.countUsageByTagIds(
+      items.map((item) => item.id),
+      OrganizationId.create(input.organizationId),
+    );
 
     return {
-      items: items.map(TechnicalTagResponseMapper.toResponse),
+      items: items.map((item) => TechnicalTagResponseMapper.toResponse(item, usageCounts.get(item.id) ?? 0)),
       page: input.page,
       pageSize: input.limit,
       total,
