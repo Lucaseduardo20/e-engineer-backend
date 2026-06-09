@@ -21,6 +21,8 @@ import { ProjectOrmEntity } from './infrastructure/persistence/typeorm/project.o
 import { TypeOrmProjectRepository } from './infrastructure/persistence/typeorm/typeorm-project.repository';
 import { ProjectsController } from './presentation/controllers/projects.controller';
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
+import { DELIVERABLE_REPOSITORY } from '../deliverables/domain/repositories/deliverable.repository';
+import { TypeOrmDeliverableRepository } from '../deliverables/infrastructure/repositories/deliverable.repository';
 import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeorm/document.orm-entity';
 
 @Module({
@@ -54,6 +56,10 @@ import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeo
     {
       provide: KNOWLEDGE_ITEM_REPOSITORY,
       useClass: TypeOrmKnowledgeItemRepository,
+    },
+    {
+      provide: DELIVERABLE_REPOSITORY,
+      useClass: TypeOrmDeliverableRepository,
     },
   ],
 })

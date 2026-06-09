@@ -1,4 +1,4 @@
-import { IsIn, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsUUID } from 'class-validator';
 import {
   knowledgeRelationTypes,
   type KnowledgeRelationType,
@@ -10,4 +10,8 @@ export class LinkProjectKnowledgeDto {
 
   @IsIn(knowledgeRelationTypes)
   relationType!: KnowledgeRelationType;
+
+  @IsOptional()
+  @IsUUID()
+  deliverableId?: string;
 }

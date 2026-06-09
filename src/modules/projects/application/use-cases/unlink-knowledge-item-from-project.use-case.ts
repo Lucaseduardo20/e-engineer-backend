@@ -11,6 +11,10 @@ import {
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
+import {
+  DELIVERABLE_REPOSITORY,
+  type DeliverableRepository,
+} from '../../../deliverables/domain/repositories/deliverable.repository';
 
 @Injectable()
 export class UnlinkKnowledgeItemFromProjectUseCase {
@@ -19,6 +23,8 @@ export class UnlinkKnowledgeItemFromProjectUseCase {
     private readonly projects: ProjectRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    @Inject(DELIVERABLE_REPOSITORY)
+    private readonly deliverables: DeliverableRepository,
     private readonly audit: AuditQueryService,
   ) {}
 
@@ -36,6 +42,14 @@ export class UnlinkKnowledgeItemFromProjectUseCase {
         throw new Error('Project not found.');
       }
 
+      const deliverablePage = await this.deliverables.list(organizationId, {
+        projectId,
+        page: 1,
+        pageSize: 500,
+      });
+      const projectDeliverableIds = new Set(
+        deliverablePage.items.map((deliverable) => deliverable.id),
+      );
       const page = await this.knowledgeItems.list(organizationId, {
         page: 1,
         pageSize: 100,
@@ -53,8 +67,10 @@ export class UnlinkKnowledgeItemFromProjectUseCase {
         const relation = detail?.relations.find(
           (value) =>
             value.id === input.relationId &&
-            value.targetType === 'project' &&
-            value.targetId === input.projectId,
+            ((value.targetType === 'project' &&
+              value.targetId === input.projectId) ||
+              (value.targetType === 'deliverable' &&
+                projectDeliverableIds.has(value.targetId))),
         );
 
         if (relation) {

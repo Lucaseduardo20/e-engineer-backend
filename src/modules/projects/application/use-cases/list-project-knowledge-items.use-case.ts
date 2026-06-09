@@ -10,10 +10,16 @@ import {
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
 import { KnowledgeItemDetailResponseDto } from 'src/modules/knowledge-base/presentation/dto/knowledge-item-detail-response.dto';
+import {
+  DELIVERABLE_REPOSITORY,
+  type DeliverableRepository,
+} from '../../../deliverables/domain/repositories/deliverable.repository';
 
 export interface ProjectKnowledgeItem {
   relationId: string;
   relationType: string;
+  targetType: string;
+  targetId: string;
   linkedAt: string;
   linkedBy: string;
   knowledgeItem: {
@@ -37,6 +43,8 @@ export class ListProjectKnowledgeItemsUseCase {
     private readonly projects: ProjectRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    @Inject(DELIVERABLE_REPOSITORY)
+    private readonly deliverables: DeliverableRepository,
   ) {}
 
   async execute(input: {
@@ -53,6 +61,14 @@ export class ListProjectKnowledgeItemsUseCase {
       return null;
     }
 
+    const deliverablePage = await this.deliverables.list(organizationId, {
+      projectId: new UniqueEntityId(input.projectId),
+      page: 1,
+      pageSize: 500,
+    });
+    const projectDeliverableIds = new Set(
+      deliverablePage.items.map((deliverable) => deliverable.id),
+    );
     const page = await this.knowledgeItems.list(organizationId, {
       page: 1,
       pageSize: 100,
@@ -69,31 +85,36 @@ export class ListProjectKnowledgeItemsUseCase {
 
       if (!detail) continue;
 
-      const relation = detail.relations.find(
+      const relations = detail.relations.filter(
         (value) =>
-          value.targetType === 'project' && value.targetId === input.projectId,
+          (value.targetType === 'project' &&
+            value.targetId === input.projectId) ||
+          (value.targetType === 'deliverable' &&
+            projectDeliverableIds.has(value.targetId)),
       );
 
-      if (!relation) continue;
-
-      linked.push({
-        relationId: relation.id,
-        relationType: relation.relationType,
-        linkedAt: relation.createdAt,
-        linkedBy: relation.createdBy,
-        knowledgeItem: {
-          id: detail.id,
-          title: detail.title,
-          description: detail.description,
-          type: detail.type,
-          status: detail.status,
-          tags: detail.tags,
-          updatedAt: detail.updatedAt,
-          publishedAt: detail.publishedAt,
-          archivedAt: detail.archivedAt,
-          deprecatedAt: detail.deprecatedAt,
-        },
-      });
+      for (const relation of relations) {
+        linked.push({
+          relationId: relation.id,
+          relationType: relation.relationType,
+          targetType: relation.targetType,
+          targetId: relation.targetId,
+          linkedAt: relation.createdAt,
+          linkedBy: relation.createdBy,
+          knowledgeItem: {
+            id: detail.id,
+            title: detail.title,
+            description: detail.description,
+            type: detail.type,
+            status: detail.status,
+            tags: detail.tags,
+            updatedAt: detail.updatedAt,
+            publishedAt: detail.publishedAt,
+            archivedAt: detail.archivedAt,
+            deprecatedAt: detail.deprecatedAt,
+          },
+        });
+      }
     }
 
     return { items: linked };

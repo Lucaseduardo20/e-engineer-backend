@@ -128,6 +128,7 @@ export class ProjectsController {
       projectId: id,
       knowledgeItemId: body.knowledgeItemId,
       relationType: body.relationType,
+      deliverableId: body.deliverableId,
       linkedBy: request.user.userId,
     });
 
