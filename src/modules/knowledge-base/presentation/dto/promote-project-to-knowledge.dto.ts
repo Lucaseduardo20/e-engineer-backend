@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class PromoteProjectToKnowledgeDto {
   @IsString()
@@ -14,6 +14,11 @@ export class PromoteProjectToKnowledgeDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  tagIds?: string[];
 
   @IsString()
   @MaxLength(4000)

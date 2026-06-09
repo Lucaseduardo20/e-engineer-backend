@@ -35,6 +35,7 @@ export class PromoteProjectToKnowledgeUseCase {
     title: string;
     description?: string | null;
     tags?: string[];
+    tagIds?: string[];
     reason: string;
     whenToUse?: string;
     warnings?: string;
@@ -95,6 +96,14 @@ export class PromoteProjectToKnowledgeUseCase {
       });
 
       await this.knowledgeItems.save(item);
+      if (input.tagIds) {
+        await this.knowledgeItems.syncTags({
+          knowledgeItemId: new UniqueEntityId(item.id),
+          organizationId,
+          tagIds: [...new Set(input.tagIds)],
+          actorId: input.createdBy,
+        });
+      }
       await this.knowledgeItems.saveRelation(relation);
       await this.events.publishAll([
         ...item.pullDomainEvents(),
