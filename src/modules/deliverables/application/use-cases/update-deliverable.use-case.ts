@@ -20,6 +20,8 @@ export interface UpdateDeliverableInput {
   status?: string;
   type?: string;
   assignees?: string[];
+  tagIds?: string[];
+  updatedBy?: string;
 }
 
 @Injectable()
@@ -54,6 +56,14 @@ export class UpdateDeliverableUseCase {
       });
 
       await this.deliverableRepository.save(deliverable);
+      if (input.tagIds) {
+        await this.deliverableRepository.syncTags({
+          deliverableId: new UniqueEntityId(deliverable.id),
+          organizationId: OrganizationId.create(input.organizationId),
+          tagIds: input.tagIds,
+          actorId: input.updatedBy ?? 'system',
+        });
+      }
 
       return Result.ok(DeliverableMapper.toResponse(deliverable));
     } catch (error) {

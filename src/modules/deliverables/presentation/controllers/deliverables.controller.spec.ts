@@ -124,6 +124,7 @@ describe('DeliverablesController', () => {
       title: 'Projeto estrutural',
       type: 'structural_project',
       assignees: ['Lucas'],
+      createdBy: 'user-1',
     });
   });
 

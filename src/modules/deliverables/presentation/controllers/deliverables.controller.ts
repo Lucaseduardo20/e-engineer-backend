@@ -92,6 +92,7 @@ export class DeliverablesController {
     const result = await this.createDeliverableUseCase.execute({
       ...body,
       organizationId: request.user.organizationId,
+      createdBy: request.user.userId,
     });
 
     if (result.isFail()) {
@@ -112,6 +113,7 @@ export class DeliverablesController {
       ...body,
       organizationId: request.user.organizationId,
       deliverableId: id,
+      updatedBy: request.user.userId,
     });
 
     if (result.isFail()) {

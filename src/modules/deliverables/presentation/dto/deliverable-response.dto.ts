@@ -10,5 +10,13 @@ export class DeliverableResponseDto {
   status!: DeliverableStatusValue;
   type!: DeliverableTypeValue;
   assignees!: string[];
+  tagIds?: string[];
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
   attachments?: { url: string; name: string }[];
 }

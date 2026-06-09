@@ -17,6 +17,12 @@ export interface ListDeliverablesParams {
 
 export interface DeliverableRepository {
   save(deliverable: Deliverable): Promise<void>;
+  syncTags(params: {
+    deliverableId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+  }): Promise<void>;
   list(
     organizationId: OrganizationId,
     params: ListDeliverablesParams,

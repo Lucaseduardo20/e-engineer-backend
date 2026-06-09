@@ -21,6 +21,8 @@ export interface CreateDeliverableInput {
   status?: string;
   type: string;
   assignees?: string[];
+  tagIds?: string[];
+  createdBy?: string;
 }
 
 @Injectable()
@@ -59,6 +61,14 @@ export class CreateDeliverableUseCase {
       });
 
       await this.deliverableRepository.save(deliverable);
+      if (input.tagIds) {
+        await this.deliverableRepository.syncTags({
+          deliverableId: new UniqueEntityId(deliverable.id),
+          organizationId,
+          tagIds: input.tagIds,
+          actorId: input.createdBy ?? 'system',
+        });
+      }
 
       return Result.ok(DeliverableMapper.toResponse(deliverable));
     } catch (error) {

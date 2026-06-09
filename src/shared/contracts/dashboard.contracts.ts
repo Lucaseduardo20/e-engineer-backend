@@ -58,6 +58,14 @@ export interface Deliverable {
     | 'technical_report'
     | 'other';
   assignees: string[];
+  tagIds?: string[];
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
   attachments?: { url: string; name: string }[];
 }
 

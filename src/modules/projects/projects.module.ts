@@ -23,6 +23,7 @@ import { ProjectsController } from './presentation/controllers/projects.controll
 import { DeliverableOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { DELIVERABLE_REPOSITORY } from '../deliverables/domain/repositories/deliverable.repository';
 import { TypeOrmDeliverableRepository } from '../deliverables/infrastructure/repositories/deliverable.repository';
+import { DeliverableTagOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable-tag.orm-entity';
 import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeorm/document.orm-entity';
 
 @Module({
@@ -35,6 +36,7 @@ import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeo
       KnowledgeItemTagOrmEntity,
       TechnicalTagOrmEntity,
       DeliverableOrmEntity,
+      DeliverableTagOrmEntity,
       DocumentOrmEntity,
     ]),
     SharedInfrastructureModule,
