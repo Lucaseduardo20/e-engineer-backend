@@ -9,6 +9,7 @@ import { UpdateProjectStatusUseCase } from './application/use-cases/update-proje
 import { ListProjectKnowledgeItemsUseCase } from './application/use-cases/list-project-knowledge-items.use-case';
 import { LinkKnowledgeItemToProjectUseCase } from './application/use-cases/link-knowledge-item-to-project.use-case';
 import { UnlinkKnowledgeItemFromProjectUseCase } from './application/use-cases/unlink-knowledge-item-from-project.use-case';
+import { RecommendKnowledgeForProjectUseCase } from './application/use-cases/recommend-knowledge-for-project.use-case';
 import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
 import { TypeOrmKnowledgeItemRepository } from '../knowledge-base/infrastructure/repositories/knowledge-item.repository';
 import { KnowledgeItemOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item.orm-entity';
@@ -51,6 +52,7 @@ import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeo
     ListProjectKnowledgeItemsUseCase,
     LinkKnowledgeItemToProjectUseCase,
     UnlinkKnowledgeItemFromProjectUseCase,
+    RecommendKnowledgeForProjectUseCase,
     {
       provide: PROJECT_REPOSITORY,
       useClass: TypeOrmProjectRepository,

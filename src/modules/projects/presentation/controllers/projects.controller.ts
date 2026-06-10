@@ -42,6 +42,7 @@ import { AuditQueryService } from '../../../audit/infrastructure/repositories/au
 import { ListProjectKnowledgeItemsUseCase } from '../../application/use-cases/list-project-knowledge-items.use-case';
 import { LinkKnowledgeItemToProjectUseCase } from '../../application/use-cases/link-knowledge-item-to-project.use-case';
 import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cases/unlink-knowledge-item-from-project.use-case';
+import { RecommendKnowledgeForProjectUseCase } from '../../application/use-cases/recommend-knowledge-for-project.use-case';
 import { LinkProjectKnowledgeDto } from '../dto/link-project-knowledge.dto';
 
 @ApiTags('projects')
@@ -58,6 +59,7 @@ export class ProjectsController {
     private readonly listProjectKnowledgeItemsUseCase: ListProjectKnowledgeItemsUseCase,
     private readonly linkKnowledgeItemToProjectUseCase: LinkKnowledgeItemToProjectUseCase,
     private readonly unlinkKnowledgeItemFromProjectUseCase: UnlinkKnowledgeItemFromProjectUseCase,
+    private readonly recommendKnowledgeForProjectUseCase: RecommendKnowledgeForProjectUseCase,
   ) {}
 
   @Get()
@@ -93,6 +95,25 @@ export class ProjectsController {
     }
 
     return ok(project);
+  }
+
+  @Get(':id/knowledge/recommendations')
+  @ApiOkResponse({ description: 'Recomendacoes de knowledge por tags do projeto.' })
+  @RequirePermissions(permissions.knowledge.read)
+  async recommendKnowledge(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ items: unknown[] }>> {
+    const result = await this.recommendKnowledgeForProjectUseCase.execute({
+      organizationId: request.user.organizationId,
+      projectId: id,
+    });
+
+    if (!result) {
+      throw new NotFoundException('Project not found.');
+    }
+
+    return ok(result);
   }
 
 

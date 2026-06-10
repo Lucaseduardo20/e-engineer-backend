@@ -69,6 +69,34 @@ export interface Deliverable {
   attachments?: { url: string; name: string }[];
 }
 
+export interface ProjectKnowledgeRecommendation {
+  knowledgeItem: {
+    id: string;
+    title: string;
+    description?: string | null;
+    type: string;
+    status: string;
+    tags: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+      status: string;
+    }>;
+    updatedAt: string;
+    publishedAt?: string | null;
+  };
+  matchedTags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
+  score: number;
+  reason: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;
