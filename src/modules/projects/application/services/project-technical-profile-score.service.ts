@@ -3,10 +3,11 @@ import type { ProjectTechnicalProfileTagSource } from '../../domain/repositories
 import type { ProjectTechnicalProfileTagDto } from '../dto/project-technical-profile.dto';
 
 const DIRECT_PROJECT_TAG_SCORE = 3;
+const DELIVERABLE_TAG_SCORE = 2;
 
 @Injectable()
 export class ProjectTechnicalProfileScoreService {
-  readonly explanation = 'Tag direta no projeto: +3.';
+  readonly explanation = 'Tag direta no projeto: +3. Tag em entregavel: +2.';
 
   calculate(
     tagSources: ProjectTechnicalProfileTagSource[],
@@ -24,10 +25,17 @@ export class ProjectTechnicalProfileScoreService {
         sources: [],
       };
 
-      current.score += DIRECT_PROJECT_TAG_SCORE;
+      const score =
+        tagSource.source === 'deliverable_tag'
+          ? DELIVERABLE_TAG_SCORE
+          : DIRECT_PROJECT_TAG_SCORE;
+      current.score += score;
       current.sources.push({
-        type: 'project_tag',
-        score: DIRECT_PROJECT_TAG_SCORE,
+        type:
+          tagSource.source === 'deliverable_tag'
+            ? 'deliverable_tag'
+            : 'project_tag',
+        score,
       });
       byTagId.set(tagSource.tagId, current);
     }

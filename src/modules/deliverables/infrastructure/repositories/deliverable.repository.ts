@@ -53,6 +53,7 @@ export class TypeOrmDeliverableRepository
     organizationId: OrganizationId;
     tagIds: string[];
     actorId: string;
+    source?: string;
   }): Promise<void> {
     await this.deliverableTags.delete({
       deliverableId: params.deliverableId.toString(),
@@ -68,9 +69,40 @@ export class TypeOrmDeliverableRepository
         organizationId: params.organizationId.toString(),
         deliverableId: params.deliverableId.toString(),
         tagId,
+        source: params.source ?? 'manual',
         createdBy: params.actorId,
       })),
     );
+  }
+
+  async ensureSelectableTags(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+  }): Promise<void> {
+    const unique = [...new Set(params.tagIds)].filter(Boolean);
+    if (!unique.length) return;
+
+    const tags = await this.technicalTags.find({
+      where: {
+        id: In(unique),
+        organizationId: params.organizationId.toString(),
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    const foundIds = new Set(tags.map((tag) => tag.id));
+    const missing = unique.filter((tagId) => !foundIds.has(tagId));
+    if (missing.length) {
+      throw new Error('Technical tag not found for this organization.');
+    }
+
+    const archived = tags.find((tag) => tag.status === 'archived');
+    if (archived) {
+      throw new Error('Archived technical tags cannot be linked to a deliverable.');
+    }
   }
 
   async list(

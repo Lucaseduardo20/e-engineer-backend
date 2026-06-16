@@ -1167,6 +1167,61 @@ async function seedProjectTags(query: Query): Promise<void> {
   }
 }
 
+async function seedDeliverableTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const deliverableTagsByName = new Map<string, string[]>([
+    ['Projeto arquitetonico', ['Arquitetura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto estrutural', ['Estrutura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto eletrico', ['Eletrica', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto hidraulico', ['Hidraulica', 'Prancha tecnica', 'Falta de compatibilizacao']],
+    ['Memorial descritivo', ['Memorial descritivo', 'Documento modelo', 'Prefeitura SP']],
+    ['Orcamento', ['Orcamento', 'Planilha orcamentaria', 'Quantitativos divergentes']],
+    ['Cronograma fisico-financeiro', ['Cronograma', 'Cronograma fisico-financeiro', 'Entrega final']],
+    ['Relatorio fotografico', ['Relatorio fotografico', 'Levantamento', 'Documento incompleto']],
+    ['Projeto de drenagem', ['Drenagem', 'Projeto executivo', 'Orgao publico']],
+    ['Projeto de pavimentacao', ['Pavimentacao', 'Projeto executivo', 'Orgao publico']],
+    ['Projeto paisagistico', ['Praca publica', 'Projeto basico', 'Zeladoria urbana']],
+    ['Projeto de iluminacao', ['Eletrica', 'Praca publica', 'Zeladoria urbana']],
+  ]);
+
+  for (const project of projects) {
+    const template = templates.find((item) => item.id === project.templateId);
+    if (!template) continue;
+
+    for (const deliverableName of template.deliverables) {
+      const deliverableId = uuidFromText(
+        `deliverable:${project.id}:${deliverableName}`,
+      );
+      const tagNames =
+        deliverableTagsByName.get(deliverableName) ??
+        [deliverableTypeFromName(deliverableName) === 'technical_report' ? 'Projeto executivo' : 'Prancha tecnica'];
+
+      for (const tagName of [...new Set(tagNames)]) {
+        const slug = normalizeTechnicalTagSlug(tagName);
+        await query(
+          `
+            INSERT INTO deliverable_tags (
+              id, organization_id, deliverable_id, tag_id, source, created_by, created_at
+            )
+            VALUES ($1, $2, $3, $4, 'manual', $5, now())
+            ON CONFLICT (organization_id, deliverable_id, tag_id) DO UPDATE SET
+              source = EXCLUDED.source
+          `,
+          [
+            uuidFromText(
+              `deliverable-tag:${organizationId}:${deliverableId}:${slug}`,
+            ),
+            organizationId,
+            deliverableId,
+            uuidFromText(`technical-tag:${organizationId}:${slug}`),
+            actor,
+          ],
+        );
+      }
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await dataSource.initialize();
 
@@ -1183,6 +1238,7 @@ async function main(): Promise<void> {
       await seedKnowledgeRelations(query);
       await seedTechnicalTags(query);
       await seedProjectTags(query);
+      await seedDeliverableTags(query);
       await seedActivityLog(query);
     });
 

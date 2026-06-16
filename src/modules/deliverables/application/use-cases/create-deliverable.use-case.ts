@@ -47,6 +47,13 @@ export class CreateDeliverableUseCase {
         throw new Error('Project not found.');
       }
 
+      if (input.tagIds) {
+        await this.deliverableRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
+      }
+
       const deliverable = Deliverable.create({
         organizationId,
         projectId,
@@ -70,7 +77,12 @@ export class CreateDeliverableUseCase {
         });
       }
 
-      return Result.ok(DeliverableMapper.toResponse(deliverable));
+      const persisted = await this.deliverableRepository.getById(
+        new UniqueEntityId(deliverable.id),
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DeliverableMapper.toResponse(deliverable));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),

@@ -444,6 +444,7 @@ export class TypeOrmProjectBaseStructureRepository
             organizationId,
             deliverableId,
             tagId: tag.tagId,
+            source: 'inherited',
             createdBy: params.actorId,
             createdAt: now,
           });
@@ -692,6 +693,7 @@ export class TypeOrmProjectBaseStructureRepository
             organizationId,
             deliverableId,
             tagId: tag.tagId,
+            source: 'inherited',
             createdBy: params.actorId,
             createdAt: now,
           });

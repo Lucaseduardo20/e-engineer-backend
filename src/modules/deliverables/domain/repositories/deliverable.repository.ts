@@ -22,6 +22,11 @@ export interface DeliverableRepository {
     organizationId: OrganizationId;
     tagIds: string[];
     actorId: string;
+    source?: string;
+  }): Promise<void>;
+  ensureSelectableTags(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
   }): Promise<void>;
   list(
     organizationId: OrganizationId,

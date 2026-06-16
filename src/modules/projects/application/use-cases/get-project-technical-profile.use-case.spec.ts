@@ -97,7 +97,7 @@ describe('GetProjectTechnicalProfileUseCase', () => {
     expect(result).toMatchObject({
       projectId: repository.project!.id,
       organizationId,
-      scoreExplanation: 'Tag direta no projeto: +3.',
+      scoreExplanation: 'Tag direta no projeto: +3. Tag em entregavel: +2.',
       tags: [
         {
           id: tagId,
@@ -107,6 +107,33 @@ describe('GetProjectTechnicalProfileUseCase', () => {
         },
       ],
     });
+  });
+
+  it('adds deliverable tags with lower score to the technical profile', async () => {
+    const tagId = randomUUID();
+    repository.tagSources = [
+      {
+        tagId,
+        name: 'Orcamento',
+        slug: 'orcamento',
+        category: 'technical_discipline',
+        status: 'active',
+        source: 'deliverable_tag',
+      },
+    ];
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId: repository.project!.id,
+    });
+
+    expect(result?.tags).toEqual([
+      expect.objectContaining({
+        id: tagId,
+        score: 2,
+        sources: [{ type: 'deliverable_tag', score: 2 }],
+      }),
+    ]);
   });
 
   it('returns an empty profile for projects without tags', async () => {

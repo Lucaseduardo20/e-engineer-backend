@@ -17,6 +17,9 @@ export class DeliverableTagOrmEntity {
   @Column({ name: 'tag_id', type: 'uuid' })
   tagId!: string;
 
+  @Column({ type: 'varchar', length: 40, default: 'manual' })
+  source!: string;
+
   @Column({ name: 'created_by', type: 'varchar', length: 120 })
   createdBy!: string;
 

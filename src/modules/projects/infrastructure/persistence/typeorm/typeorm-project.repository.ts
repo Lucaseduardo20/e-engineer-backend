@@ -15,6 +15,8 @@ import { ProjectMapper } from '../../mappers/project.mapper';
 import { ProjectOrmEntity } from './project.orm-entity';
 import { ProjectTagOrmEntity } from './project-tag.orm-entity';
 import { TechnicalTagOrmEntity } from '../../../../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
+import { DeliverableOrmEntity } from '../../../../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
+import { DeliverableTagOrmEntity } from '../../../../deliverables/infrastructure/persistence/typeorm/deliverable-tag.orm-entity';
 import type {
   Paginated,
   Project as ProjectContract,
@@ -44,6 +46,8 @@ export class TypeOrmProjectRepository
     private readonly projectTags: Repository<ProjectTagOrmEntity>,
     @InjectRepository(TechnicalTagOrmEntity)
     private readonly technicalTags: Repository<TechnicalTagOrmEntity>,
+    @InjectRepository(DeliverableTagOrmEntity)
+    private readonly deliverableTags: Repository<DeliverableTagOrmEntity>,
   ) {
     super(repository);
   }
@@ -185,7 +189,7 @@ export class TypeOrmProjectRepository
     projectId: UniqueEntityId,
     organizationId: OrganizationId,
   ): Promise<ProjectTechnicalProfileTagSource[]> {
-    return this.projectTags
+    const projectTagSources = await this.projectTags
       .createQueryBuilder('pt')
       .innerJoin(
         'technical_tags',
@@ -209,6 +213,37 @@ export class TypeOrmProjectRepository
       ])
       .orderBy('tag.name', 'ASC')
       .getRawMany<ProjectTechnicalProfileTagSource>();
+    const deliverableTagSources = await this.deliverableTags
+      .createQueryBuilder('dt')
+      .innerJoin(
+        DeliverableOrmEntity,
+        'deliverable',
+        'deliverable.id = dt.deliverable_id AND deliverable.organization_id = dt.organization_id',
+      )
+      .innerJoin(
+        'technical_tags',
+        'tag',
+        'tag.id = dt.tag_id AND tag.organization_id = dt.organization_id',
+      )
+      .where('dt.organization_id = :organizationId', {
+        organizationId: organizationId.toString(),
+      })
+      .andWhere('deliverable.project_id = :projectId', {
+        projectId: projectId.toString(),
+      })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .select([
+        'tag.id AS "tagId"',
+        'tag.name AS "name"',
+        'tag.slug AS "slug"',
+        'tag.category AS "category"',
+        'tag.status AS "status"',
+        `'deliverable_tag' AS "source"`,
+      ])
+      .orderBy('tag.name', 'ASC')
+      .getRawMany<ProjectTechnicalProfileTagSource>();
+
+    return [...projectTagSources, ...deliverableTagSources];
   }
 
   private toContract(

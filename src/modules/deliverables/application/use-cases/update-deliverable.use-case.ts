@@ -44,6 +44,14 @@ export class UpdateDeliverableUseCase {
         throw new Error('Deliverable not found.');
       }
 
+      const organizationId = OrganizationId.create(input.organizationId);
+      if (input.tagIds) {
+        await this.deliverableRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
+      }
+
       deliverable.update({
         title: input.title,
         description: input.description,
@@ -59,13 +67,18 @@ export class UpdateDeliverableUseCase {
       if (input.tagIds) {
         await this.deliverableRepository.syncTags({
           deliverableId: new UniqueEntityId(deliverable.id),
-          organizationId: OrganizationId.create(input.organizationId),
+          organizationId,
           tagIds: input.tagIds,
           actorId: input.updatedBy ?? 'system',
         });
       }
 
-      return Result.ok(DeliverableMapper.toResponse(deliverable));
+      const persisted = await this.deliverableRepository.getById(
+        new UniqueEntityId(deliverable.id),
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DeliverableMapper.toResponse(deliverable));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),

@@ -42,7 +42,7 @@ export interface Project {
 }
 
 export interface ProjectTechnicalProfileSource {
-  type: 'project_tag';
+  type: 'project_tag' | 'deliverable_tag';
   score: number;
 }
 

@@ -10,6 +10,7 @@ export class CreateDeliverableTags1717783200000 implements MigrationInterface {
         organization_id uuid NOT NULL,
         deliverable_id uuid NOT NULL,
         tag_id uuid NOT NULL,
+        source varchar(40) NOT NULL DEFAULT 'manual',
         created_by varchar(120) NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now(),
         CONSTRAINT fk_deliverable_tags_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,

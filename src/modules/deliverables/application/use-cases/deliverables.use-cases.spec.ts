@@ -16,6 +16,7 @@ function createRepository(): jest.Mocked<DeliverableRepository> {
   return {
     findById: jest.fn(),
     getById: jest.fn(),
+    ensureSelectableTags: jest.fn(),
     list: jest.fn(),
     markInheritanceReviewed: jest.fn(),
     projectExists: jest.fn(),
@@ -55,6 +56,57 @@ describe('Deliverables use cases', () => {
       status: 'todo',
       assignees: ['Lucas Eduardo'],
     });
+  });
+
+  it('validates and syncs governed tags when creating a deliverable', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    const useCase = new CreateDeliverableUseCase(repository);
+    const organizationId = randomUUID();
+    const projectId = randomUUID();
+    const tagId = randomUUID();
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId,
+      title: 'Orcamento',
+      type: 'budget',
+      tagIds: [tagId, tagId],
+      createdBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.ensureSelectableTags).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      tagIds: [tagId, tagId],
+    });
+    expect(repository.syncTags).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: OrganizationId.create(organizationId),
+        tagIds: [tagId, tagId],
+        actorId: 'coord-1',
+      }),
+    );
+  });
+
+  it('does not create a deliverable when tag validation fails', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    repository.ensureSelectableTags.mockRejectedValue(
+      new Error('Technical tag not found for this organization.'),
+    );
+    const useCase = new CreateDeliverableUseCase(repository);
+
+    const result = await useCase.execute({
+      organizationId: randomUUID(),
+      projectId: randomUUID(),
+      title: 'Orcamento',
+      type: 'budget',
+      tagIds: [randomUUID()],
+    });
+
+    expect(result.isFail()).toBe(true);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('rejects creation when the project is outside the tenant scope', async () => {
