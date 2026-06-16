@@ -18,6 +18,7 @@ import type {
   SimilarProjectRecommendation,
 } from '../../application/ports/project-base-structure.repository';
 import { ProjectTagOrmEntity } from '../persistence/typeorm/project-tag.orm-entity';
+import { DeliverableBaseRelationOrmEntity } from '../persistence/typeorm/deliverable-base-relation.orm-entity';
 import { ProjectBaseRelationOrmEntity } from '../persistence/typeorm/project-base-relation.orm-entity';
 import { ProjectOrmEntity } from '../persistence/typeorm/project.orm-entity';
 
@@ -569,21 +570,63 @@ export class TypeOrmProjectBaseStructureRepository
     });
   }
 
+  async ensureDeliverablesBelongToBase(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    deliverableIds: string[];
+  }): Promise<void> {
+    const deliverableIds = [...new Set(params.deliverableIds)].filter(Boolean);
+
+    if (!deliverableIds.length) {
+      return;
+    }
+
+    const count = await this.deliverables.count({
+      where: {
+        id: In(deliverableIds),
+        projectId: params.baseProjectId.toString(),
+        organizationId: params.organizationId.toString(),
+      },
+    });
+
+    if (count !== deliverableIds.length) {
+      throw new Error('Selected deliverables must belong to the base project.');
+    }
+  }
+
   async copyDeliverablesOnly(params: {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;
     targetProjectId: UniqueEntityId;
+    deliverableIds?: string[];
     actorId: string;
   }): Promise<{ deliverablesCopied: number }> {
     const organizationId = params.organizationId.toString();
     const baseProjectId = params.baseProjectId.toString();
     const targetProjectId = params.targetProjectId.toString();
+    const selectedDeliverableIds = [
+      ...new Set(params.deliverableIds ?? []),
+    ].filter(Boolean);
 
     return this.projects.manager.transaction(async (manager) => {
       const sourceDeliverables = await manager.find(DeliverableOrmEntity, {
-        where: { projectId: baseProjectId, organizationId },
+        where: {
+          projectId: baseProjectId,
+          organizationId,
+          ...(selectedDeliverableIds.length
+            ? { id: In(selectedDeliverableIds) }
+            : {}),
+        },
         order: { name: 'ASC' },
       });
+
+      if (
+        selectedDeliverableIds.length &&
+        sourceDeliverables.length !== selectedDeliverableIds.length
+      ) {
+        throw new Error('Selected deliverables must belong to the base project.');
+      }
+
       const sourceDeliverableIds = sourceDeliverables.map((item) => item.id);
       const sourceTags = sourceDeliverableIds.length
         ? await manager.find(DeliverableTagOrmEntity, {
@@ -616,6 +659,29 @@ export class TypeOrmProjectBaseStructureRepository
       });
 
       await manager.save(DeliverableOrmEntity, copiedDeliverables);
+
+      const copiedRelations = sourceDeliverables
+        .map((deliverable) => {
+          const targetDeliverableId = deliverableIdMap.get(deliverable.id);
+          if (!targetDeliverableId) return null;
+
+          return manager.create(DeliverableBaseRelationOrmEntity, {
+            id: randomUUID(),
+            organizationId,
+            baseProjectId,
+            targetProjectId,
+            baseDeliverableId: deliverable.id,
+            targetDeliverableId,
+            relationType: 'inherited_from_base',
+            createdBy: params.actorId,
+            createdAt: now,
+          });
+        })
+        .filter((relation): relation is DeliverableBaseRelationOrmEntity =>
+          Boolean(relation),
+        );
+
+      await manager.save(DeliverableBaseRelationOrmEntity, copiedRelations);
 
       const copiedTags = sourceTags
         .map((tag) => {

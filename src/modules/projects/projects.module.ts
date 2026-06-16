@@ -27,6 +27,7 @@ import { KnowledgeItemTagOrmEntity } from '../knowledge-base/infrastructure/pers
 import { TechnicalTagOrmEntity } from '../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository';
 import { ProjectBaseRelationOrmEntity } from './infrastructure/persistence/typeorm/project-base-relation.orm-entity';
+import { DeliverableBaseRelationOrmEntity } from './infrastructure/persistence/typeorm/deliverable-base-relation.orm-entity';
 import { ProjectTagOrmEntity } from './infrastructure/persistence/typeorm/project-tag.orm-entity';
 import { ProjectOrmEntity } from './infrastructure/persistence/typeorm/project.orm-entity';
 import { TypeOrmProjectRepository } from './infrastructure/persistence/typeorm/typeorm-project.repository';
@@ -44,6 +45,7 @@ import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/r
     TypeOrmModule.forFeature([
       ProjectOrmEntity,
       ProjectBaseRelationOrmEntity,
+      DeliverableBaseRelationOrmEntity,
       ProjectTagOrmEntity,
       KnowledgeItemOrmEntity,
       KnowledgeRelationOrmEntity,

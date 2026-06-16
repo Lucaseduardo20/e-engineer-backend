@@ -26,6 +26,7 @@ export interface CreateProjectFromBaseProjectInput {
   tagIds?: string[];
   inheritTags?: boolean;
   inheritDeliverables?: boolean;
+  deliverablesToInherit?: string[];
   createdBy?: string;
 }
 
@@ -86,6 +87,21 @@ export class CreateProjectFromBaseProjectUseCase {
         });
       }
 
+      const inheritDeliverables = input.inheritDeliverables === true;
+      const deliverablesToInherit = [
+        ...new Set(input.deliverablesToInherit ?? []),
+      ].filter(Boolean);
+      const shouldCopyDeliverables =
+        inheritDeliverables || deliverablesToInherit.length > 0;
+
+      if (!inheritDeliverables && deliverablesToInherit.length) {
+        await this.projectBaseStructure.ensureDeliverablesBelongToBase({
+          organizationId,
+          baseProjectId,
+          deliverableIds: deliverablesToInherit,
+        });
+      }
+
       const project = Project.create({
         organizationId,
         name: input.name,
@@ -104,7 +120,6 @@ export class CreateProjectFromBaseProjectUseCase {
         });
       }
 
-      const inheritDeliverables = input.inheritDeliverables === true;
       const copied = inheritDeliverables
         ? await this.projectBaseStructure.copyDeliverablesOnly({
             organizationId,
@@ -112,6 +127,14 @@ export class CreateProjectFromBaseProjectUseCase {
             targetProjectId: new UniqueEntityId(project.id),
             actorId: input.createdBy ?? 'system',
           })
+        : deliverablesToInherit.length
+          ? await this.projectBaseStructure.copyDeliverablesOnly({
+              organizationId,
+              baseProjectId,
+              targetProjectId: new UniqueEntityId(project.id),
+              deliverableIds: deliverablesToInherit,
+              actorId: input.createdBy ?? 'system',
+            })
         : { deliverablesCopied: 0 };
 
       await this.projectBaseStructure.saveBaseRelation({
@@ -119,7 +142,7 @@ export class CreateProjectFromBaseProjectUseCase {
         baseProjectId,
         targetProjectId: new UniqueEntityId(project.id),
         inheritTags: input.inheritTags !== false,
-        inheritDeliverables,
+        inheritDeliverables: shouldCopyDeliverables,
         actorId: input.createdBy ?? 'system',
       });
       await this.domainEventPublisher.publishAll(project.pullDomainEvents());
@@ -133,7 +156,7 @@ export class CreateProjectFromBaseProjectUseCase {
         client: project.client,
         baseProjectId: input.baseProjectId,
         inheritedTags: input.inheritTags !== false,
-        inheritedDeliverables: inheritDeliverables,
+        inheritedDeliverables: shouldCopyDeliverables,
         tagIds,
         deliverablesCopied: copied.deliverablesCopied,
       });

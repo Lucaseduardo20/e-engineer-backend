@@ -50,4 +50,14 @@ export class CreateProjectFromBaseRequestDto {
   @IsOptional()
   @IsBoolean()
   inheritDeliverables?: boolean;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Entregaveis especificos do projeto base que devem ser herdados.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  deliverablesToInherit?: string[];
 }

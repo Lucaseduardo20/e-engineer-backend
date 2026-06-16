@@ -90,6 +90,11 @@ export interface ProjectBaseStructureRepository {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;
   }): Promise<string[]>;
+  ensureDeliverablesBelongToBase(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    deliverableIds: string[];
+  }): Promise<void>;
   saveBaseRelation(params: {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;
@@ -102,6 +107,7 @@ export interface ProjectBaseStructureRepository {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;
     targetProjectId: UniqueEntityId;
+    deliverableIds?: string[];
     actorId: string;
   }): Promise<{ deliverablesCopied: number }>;
   cloneStructure(params: {
