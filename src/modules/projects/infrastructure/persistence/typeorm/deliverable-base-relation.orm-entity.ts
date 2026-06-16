@@ -30,6 +30,19 @@ export class DeliverableBaseRelationOrmEntity {
   })
   relationType!: string;
 
+  @Column({
+    name: 'needs_review_after_inheritance',
+    type: 'boolean',
+    default: true,
+  })
+  needsReviewAfterInheritance!: boolean;
+
+  @Column({ name: 'reviewed_by', type: 'varchar', length: 120, nullable: true })
+  reviewedBy!: string | null;
+
+  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
+  reviewedAt!: Date | null;
+
   @Column({ name: 'created_by', type: 'varchar', length: 120 })
   createdBy!: string;
 

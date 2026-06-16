@@ -6,8 +6,10 @@ import { DeliverableRepository } from '../../domain/repositories/deliverable.rep
 import { DeliverableStatus } from '../../domain/value-objects/deliverable-status.value-object';
 import { DeliverableType } from '../../domain/value-objects/deliverable-type.value-object';
 import { CreateDeliverableUseCase } from './create-deliverable.use-case';
+import { DeleteDeliverableUseCase } from './delete-deliverable.use-case';
 import { GetDeliverableUseCase } from './get-deliverable.use-case';
 import { ListDeliverablesUseCase } from './list-deliverables.use-case';
+import { MarkDeliverableInheritanceReviewedUseCase } from './mark-deliverable-inheritance-reviewed.use-case';
 import { UpdateDeliverableUseCase } from './update-deliverable.use-case';
 
 function createRepository(): jest.Mocked<DeliverableRepository> {
@@ -15,8 +17,11 @@ function createRepository(): jest.Mocked<DeliverableRepository> {
     findById: jest.fn(),
     getById: jest.fn(),
     list: jest.fn(),
+    markInheritanceReviewed: jest.fn(),
     projectExists: jest.fn(),
     save: jest.fn(),
+    syncTags: jest.fn(),
+    delete: jest.fn(),
   };
 }
 
@@ -137,6 +142,59 @@ describe('Deliverables use cases', () => {
     expect(result.unwrap()).toMatchObject({
       status: 'done',
       assignees: ['Leonardo'],
+    });
+  });
+
+  it('marks an inherited deliverable as reviewed', async () => {
+    const repository = createRepository();
+    const organizationId = randomUUID();
+    const deliverableId = randomUUID();
+    repository.markInheritanceReviewed.mockResolvedValue({
+      id: deliverableId,
+      projectId: randomUUID(),
+      title: 'Orcamento',
+      status: 'todo',
+      type: 'budget',
+      assignees: [],
+      inheritanceReview: {
+        relationId: randomUUID(),
+        baseProjectId: randomUUID(),
+        baseDeliverableId: randomUUID(),
+        needsReviewAfterInheritance: false,
+        reviewedBy: 'coord-1',
+        reviewedAt: '2026-06-16T12:00:00.000Z',
+      },
+    });
+    const useCase = new MarkDeliverableInheritanceReviewedUseCase(repository);
+
+    const result = await useCase.execute({
+      organizationId,
+      deliverableId,
+      reviewedBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.markInheritanceReviewed).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      deliverableId: new UniqueEntityId(deliverableId),
+      reviewedBy: 'coord-1',
+    });
+    expect(result.unwrap().inheritanceReview?.needsReviewAfterInheritance).toBe(false);
+  });
+
+  it('removes a deliverable using tenant scope', async () => {
+    const repository = createRepository();
+    repository.delete.mockResolvedValue(true);
+    const useCase = new DeleteDeliverableUseCase(repository);
+    const organizationId = randomUUID();
+    const deliverableId = randomUUID();
+
+    const result = await useCase.execute({ organizationId, deliverableId });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.delete).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      deliverableId: new UniqueEntityId(deliverableId),
     });
   });
 });

@@ -77,6 +77,7 @@ describe('CreateProjectUseCase', () => {
       recommendSimilarProjects: jest.fn(),
       baseProjectExists: jest.fn().mockResolvedValue(true),
       listBaseProjectTagIds: jest.fn().mockResolvedValue([]),
+      ensureDeliverablesBelongToBase: jest.fn().mockResolvedValue(undefined),
       saveBaseRelation: jest.fn().mockResolvedValue(undefined),
       copyDeliverablesOnly: jest.fn().mockResolvedValue({
         deliverablesCopied: 0,

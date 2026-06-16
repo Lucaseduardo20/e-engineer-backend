@@ -35,6 +35,15 @@ export interface DeliverableRepository {
     deliverableId: UniqueEntityId,
     organizationId: OrganizationId,
   ): Promise<Deliverable | null>;
+  markInheritanceReviewed(params: {
+    deliverableId: UniqueEntityId;
+    organizationId: OrganizationId;
+    reviewedBy: string;
+  }): Promise<DeliverableContract | null>;
+  delete(params: {
+    deliverableId: UniqueEntityId;
+    organizationId: OrganizationId;
+  }): Promise<boolean>;
   projectExists(
     projectId: UniqueEntityId,
     organizationId: OrganizationId,

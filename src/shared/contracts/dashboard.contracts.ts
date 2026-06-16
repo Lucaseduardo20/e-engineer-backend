@@ -96,6 +96,23 @@ export interface Deliverable {
     category: string;
     status: string;
   }>;
+  inheritanceReview?: {
+    relationId: string;
+    baseProjectId: string;
+    baseDeliverableId: string;
+    needsReviewAfterInheritance: boolean;
+    reviewedBy?: string | null;
+    reviewedAt?: string | null;
+  } | null;
+  removalRequest?: {
+    id: string;
+    status: string;
+    reason: string;
+    requestedBy: string;
+    reviewedBy?: string | null;
+    reviewedAt?: string | null;
+    reviewComment?: string | null;
+  } | null;
   attachments?: { url: string; name: string }[];
 }
 
