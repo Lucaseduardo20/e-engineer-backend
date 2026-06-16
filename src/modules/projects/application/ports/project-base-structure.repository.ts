@@ -45,12 +45,43 @@ export interface ProjectBaseRecommendation {
   score: number;
 }
 
+export interface SimilarProjectRecommendation {
+  project: {
+    id: string;
+    name: string;
+    client?: string | null;
+    projectType?: string | null;
+    status: string;
+    progress: number;
+  };
+  matchedTags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
+  reason: string;
+  counters: {
+    matchedTags: number;
+    deliverables: number;
+    documents: number;
+    reviews: number;
+  };
+  score: number;
+}
+
 export interface ProjectBaseStructureRepository {
   recommendByTags(params: {
     organizationId: OrganizationId;
     tagIds: string[];
     limit: number;
   }): Promise<ProjectBaseRecommendation[]>;
+  recommendSimilarProjects(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+    limit: number;
+  }): Promise<SimilarProjectRecommendation[]>;
   cloneStructure(params: {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;

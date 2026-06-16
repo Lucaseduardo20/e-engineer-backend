@@ -13,6 +13,7 @@ import { LinkKnowledgeItemToProjectUseCase } from '../../application/use-cases/l
 import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cases/unlink-knowledge-item-from-project.use-case';
 import { RecommendKnowledgeForProjectUseCase } from '../../application/use-cases/recommend-knowledge-for-project.use-case';
 import { RecommendProjectBasesByTagsUseCase } from '../../application/use-cases/recommend-project-bases-by-tags.use-case';
+import { RecommendSimilarProjectsUseCase } from '../../application/use-cases/recommend-similar-projects.use-case';
 import { ProjectsController } from './projects.controller';
 
 function createRequest(): AuthenticatedRequest {
@@ -36,6 +37,7 @@ describe('ProjectsController', () => {
   let unlinkKnowledgeItemFromProjectUseCase: jest.Mocked<UnlinkKnowledgeItemFromProjectUseCase>;
   let recommendKnowledgeForProjectUseCase: jest.Mocked<RecommendKnowledgeForProjectUseCase>;
   let recommendProjectBasesByTagsUseCase: jest.Mocked<RecommendProjectBasesByTagsUseCase>;
+  let recommendSimilarProjectsUseCase: jest.Mocked<RecommendSimilarProjectsUseCase>;
   let audit: jest.Mocked<AuditQueryService>;
   let controller: ProjectsController;
 
@@ -73,6 +75,9 @@ describe('ProjectsController', () => {
     recommendProjectBasesByTagsUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<RecommendProjectBasesByTagsUseCase>;
+    recommendSimilarProjectsUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<RecommendSimilarProjectsUseCase>;
     audit = {
       record: jest.fn(),
     } as unknown as jest.Mocked<AuditQueryService>;
@@ -89,6 +94,7 @@ describe('ProjectsController', () => {
       unlinkKnowledgeItemFromProjectUseCase,
       recommendKnowledgeForProjectUseCase,
       recommendProjectBasesByTagsUseCase,
+      recommendSimilarProjectsUseCase,
     );
   });
 
@@ -153,6 +159,83 @@ describe('ProjectsController', () => {
       organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
       tagIds: ['44444444-4444-4444-8444-444444444444'],
       limit: undefined,
+    });
+  });
+
+  it('recommends similar projects using tenant and selected tags', async () => {
+    recommendSimilarProjectsUseCase.execute.mockResolvedValue({
+      items: [
+        {
+          project: {
+            id: 'project-1',
+            name: 'UBS Vila Esperanca',
+            status: 'completed',
+            progress: 0,
+          },
+          matchedTags: [
+            {
+              id: '44444444-4444-4444-8444-444444444444',
+              name: 'UBS',
+              slug: 'ubs',
+              category: 'project_type',
+              status: 'active',
+            },
+          ],
+          reason: 'Combina com UBS.',
+          counters: {
+            matchedTags: 1,
+            deliverables: 4,
+            documents: 2,
+            reviews: 1,
+          },
+          score: 10,
+        },
+      ],
+    });
+
+    await expect(
+      controller.similar(
+        {
+          tagIds: ['44444444-4444-4444-8444-444444444444'],
+          limit: 6,
+        },
+        createRequest(),
+      ),
+    ).resolves.toEqual({
+      data: {
+        items: [
+          {
+            project: {
+              id: 'project-1',
+              name: 'UBS Vila Esperanca',
+              status: 'completed',
+              progress: 0,
+            },
+            matchedTags: [
+              {
+                id: '44444444-4444-4444-8444-444444444444',
+                name: 'UBS',
+                slug: 'ubs',
+                category: 'project_type',
+                status: 'active',
+              },
+            ],
+            reason: 'Combina com UBS.',
+            counters: {
+              matchedTags: 1,
+              deliverables: 4,
+              documents: 2,
+              reviews: 1,
+            },
+            score: 10,
+          },
+        ],
+      },
+    });
+    expect(recommendSimilarProjectsUseCase.execute).toHaveBeenCalledWith({
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      tagIds: ['44444444-4444-4444-8444-444444444444'],
+      limit: 6,
     });
   });
 

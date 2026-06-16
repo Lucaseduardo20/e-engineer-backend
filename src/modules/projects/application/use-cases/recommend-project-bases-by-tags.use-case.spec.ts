@@ -19,6 +19,7 @@ describe('RecommendProjectBasesByTagsUseCase', () => {
           score: 10,
         },
       ]),
+      recommendSimilarProjects: jest.fn(),
       cloneStructure: jest.fn(),
     } as unknown as jest.Mocked<ProjectBaseStructureRepository>;
     const useCase = new RecommendProjectBasesByTagsUseCase(repository);
@@ -44,6 +45,7 @@ describe('RecommendProjectBasesByTagsUseCase', () => {
   it('returns no recommendations without tags', async () => {
     const repository = {
       recommendByTags: jest.fn(),
+      recommendSimilarProjects: jest.fn(),
       cloneStructure: jest.fn(),
     } as unknown as jest.Mocked<ProjectBaseStructureRepository>;
     const useCase = new RecommendProjectBasesByTagsUseCase(repository);

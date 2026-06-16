@@ -47,8 +47,10 @@ import { LinkKnowledgeItemToProjectUseCase } from '../../application/use-cases/l
 import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cases/unlink-knowledge-item-from-project.use-case';
 import { RecommendKnowledgeForProjectUseCase } from '../../application/use-cases/recommend-knowledge-for-project.use-case';
 import { RecommendProjectBasesByTagsUseCase } from '../../application/use-cases/recommend-project-bases-by-tags.use-case';
+import { RecommendSimilarProjectsUseCase } from '../../application/use-cases/recommend-similar-projects.use-case';
 import { LinkProjectKnowledgeDto } from '../dto/link-project-knowledge.dto';
 import { RecommendProjectBasesDto } from '../dto/recommend-project-bases.dto';
+import { RecommendSimilarProjectsDto } from '../dto/recommend-similar-projects.dto';
 import type { ProjectTechnicalProfileResponseDto } from '../../application/dto/project-technical-profile.dto';
 
 @ApiTags('projects')
@@ -69,6 +71,7 @@ export class ProjectsController {
     private readonly unlinkKnowledgeItemFromProjectUseCase: UnlinkKnowledgeItemFromProjectUseCase,
     private readonly recommendKnowledgeForProjectUseCase: RecommendKnowledgeForProjectUseCase,
     private readonly recommendProjectBasesByTagsUseCase: RecommendProjectBasesByTagsUseCase,
+    private readonly recommendSimilarProjectsUseCase: RecommendSimilarProjectsUseCase,
   ) {}
 
   @Get()
@@ -101,6 +104,27 @@ export class ProjectsController {
         limit: body.limit,
       }),
     );
+  }
+
+  @Post('similar')
+  @ApiOkResponse({ description: 'Projetos semelhantes por tags governadas.' })
+  async similar(
+    @Body() body: RecommendSimilarProjectsDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ items: unknown[] }>> {
+    try {
+      return ok(
+        await this.recommendSimilarProjectsUseCase.execute({
+          organizationId: request.user.organizationId,
+          tagIds: body.tagIds,
+          limit: body.limit,
+        }),
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   @Get(':id')

@@ -74,6 +74,7 @@ describe('CreateProjectUseCase', () => {
     };
     projectBaseStructure = {
       recommendByTags: jest.fn(),
+      recommendSimilarProjects: jest.fn(),
       cloneStructure: jest.fn().mockResolvedValue({
         deliverablesCopied: 0,
         documentsCopied: 0,

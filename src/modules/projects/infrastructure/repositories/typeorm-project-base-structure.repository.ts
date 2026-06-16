@@ -15,8 +15,20 @@ import { TechnicalTagOrmEntity } from '../../../technical-taxonomy/infrastructur
 import type {
   ProjectBaseRecommendation,
   ProjectBaseStructureRepository,
+  SimilarProjectRecommendation,
 } from '../../application/ports/project-base-structure.repository';
+import { ProjectTagOrmEntity } from '../persistence/typeorm/project-tag.orm-entity';
 import { ProjectOrmEntity } from '../persistence/typeorm/project.orm-entity';
+
+const similarProjectStatuses = [
+  'active',
+  'in_progress',
+  'in_review',
+  'overdue',
+  'completed',
+  'planning',
+  'waiting_approval',
+];
 
 @Injectable()
 export class TypeOrmProjectBaseStructureRepository
@@ -31,6 +43,8 @@ export class TypeOrmProjectBaseStructureRepository
     private readonly deliverableTags: Repository<DeliverableTagOrmEntity>,
     @InjectRepository(TechnicalTagOrmEntity)
     private readonly technicalTags: Repository<TechnicalTagOrmEntity>,
+    @InjectRepository(ProjectTagOrmEntity)
+    private readonly projectTags: Repository<ProjectTagOrmEntity>,
     @InjectRepository(DocumentOrmEntity)
     private readonly documents: Repository<DocumentOrmEntity>,
     @InjectRepository(DocumentVersionOrmEntity)
@@ -221,6 +235,116 @@ export class TypeOrmProjectBaseStructureRepository
     }
 
     return recommendations;
+  }
+
+  async recommendSimilarProjects(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+    limit: number;
+  }): Promise<SimilarProjectRecommendation[]> {
+    const organizationId = params.organizationId.toString();
+    const tagIds = [...new Set(params.tagIds)].filter(Boolean);
+
+    if (!tagIds.length) {
+      return [];
+    }
+
+    const rows = await this.projects
+      .createQueryBuilder('project')
+      .innerJoin(
+        ProjectTagOrmEntity,
+        'projectTag',
+        'projectTag.project_id = project.id AND projectTag.organization_id = project.organization_id',
+      )
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = projectTag.tag_id AND tag.organization_id = project.organization_id',
+      )
+      .select('project.id', 'projectId')
+      .addSelect('COUNT(DISTINCT projectTag.tag_id)', 'matchedCount')
+      .where('project.organizationId = :organizationId', { organizationId })
+      .andWhere('project.status IN (:...statuses)', {
+        statuses: similarProjectStatuses,
+      })
+      .andWhere('projectTag.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .groupBy('project.id')
+      .orderBy('"matchedCount"', 'DESC')
+      .addOrderBy('project.updatedAt', 'DESC')
+      .limit(params.limit)
+      .getRawMany<{ projectId: string; matchedCount: string }>();
+
+    const projectIds = rows.map((row) => row.projectId);
+    if (!projectIds.length) {
+      return [];
+    }
+
+    const [projects, deliverables, documents, reviews, matchedTagsByProject] =
+      await Promise.all([
+        this.projects.find({
+          where: { id: In(projectIds), organizationId },
+        }),
+        this.deliverables.find({
+          where: { projectId: In(projectIds), organizationId },
+        }),
+        this.documents.find({
+          where: { projectId: In(projectIds), organizationId },
+        }),
+        this.reviews.find({
+          where: { projectId: In(projectIds), organizationId },
+        }),
+        this.loadMatchedProjectTags(organizationId, projectIds, tagIds),
+      ]);
+
+    const projectsById = new Map(projects.map((project) => [project.id, project]));
+    const deliverablesByProject = this.groupBy(deliverables, (item) => item.projectId);
+    const documentsByProject = this.groupBy(documents, (item) => item.projectId);
+    const reviewsByProject = this.groupBy(reviews, (item) => item.projectId);
+    const matchedCountByProject = new Map(
+      rows.map((row) => [row.projectId, Number(row.matchedCount)]),
+    );
+
+    const recommendations: SimilarProjectRecommendation[] = [];
+
+    for (const projectId of projectIds) {
+      const project = projectsById.get(projectId);
+      if (!project) continue;
+
+      const matchedTags = matchedTagsByProject.get(projectId) ?? [];
+      const counters = {
+        matchedTags: matchedTags.length,
+        deliverables: deliverablesByProject.get(projectId)?.length ?? 0,
+        documents: documentsByProject.get(projectId)?.length ?? 0,
+        reviews: reviewsByProject.get(projectId)?.length ?? 0,
+      };
+      const tagNames = matchedTags.map((tag) => tag.name).slice(0, 3);
+      const reason = tagNames.length
+        ? `Combina com ${tagNames.join(', ')}.`
+        : 'Possui contexto tecnico semelhante.';
+
+      recommendations.push({
+        project: {
+          id: project.id,
+          name: project.name,
+          client: project.client,
+          projectType: project.projectType,
+          status: String(project.status),
+          progress: 0,
+        },
+        matchedTags,
+        reason,
+        counters,
+        score: (matchedCountByProject.get(projectId) ?? 0) * 10,
+      });
+    }
+
+    return recommendations.sort(
+      (first, second) =>
+        second.score - first.score ||
+        second.counters.deliverables - first.counters.deliverables ||
+        first.project.name.localeCompare(second.project.name),
+    );
   }
 
   async cloneStructure(params: {
@@ -514,6 +638,80 @@ export class TypeOrmProjectBaseStructureRepository
         },
       ]),
     );
+  }
+
+  private async loadMatchedProjectTags(
+    organizationId: string,
+    projectIds: string[],
+    tagIds: string[],
+  ): Promise<
+    Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+        category: string;
+        status: string;
+      }>
+    >
+  > {
+    if (!projectIds.length || !tagIds.length) return new Map();
+
+    const rows = await this.projectTags
+      .createQueryBuilder('projectTag')
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = projectTag.tag_id AND tag.organization_id = projectTag.organization_id',
+      )
+      .select([
+        'projectTag.project_id AS "projectId"',
+        'tag.id AS "id"',
+        'tag.name AS "name"',
+        'tag.slug AS "slug"',
+        'tag.category AS "category"',
+        'tag.status AS "status"',
+      ])
+      .where('projectTag.organization_id = :organizationId', {
+        organizationId,
+      })
+      .andWhere('projectTag.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('projectTag.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .orderBy('tag.name', 'ASC')
+      .getRawMany<{
+        projectId: string;
+        id: string;
+        name: string;
+        slug: string;
+        category: string;
+        status: string;
+      }>();
+
+    const map = new Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+        category: string;
+        status: string;
+      }>
+    >();
+
+    for (const row of rows) {
+      const tag = {
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        category: row.category,
+        status: row.status,
+      };
+      map.set(row.projectId, [...(map.get(row.projectId) ?? []), tag]);
+    }
+
+    return map;
   }
 
   private groupBy<T>(

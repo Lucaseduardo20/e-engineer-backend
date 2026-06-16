@@ -14,6 +14,7 @@ import { LinkKnowledgeItemToProjectUseCase } from './application/use-cases/link-
 import { UnlinkKnowledgeItemFromProjectUseCase } from './application/use-cases/unlink-knowledge-item-from-project.use-case';
 import { RecommendKnowledgeForProjectUseCase } from './application/use-cases/recommend-knowledge-for-project.use-case';
 import { RecommendProjectBasesByTagsUseCase } from './application/use-cases/recommend-project-bases-by-tags.use-case';
+import { RecommendSimilarProjectsUseCase } from './application/use-cases/recommend-similar-projects.use-case';
 import { PROJECT_BASE_STRUCTURE_REPOSITORY } from './application/ports/project-base-structure.repository';
 import { TypeOrmProjectBaseStructureRepository } from './infrastructure/repositories/typeorm-project-base-structure.repository';
 import { KNOWLEDGE_ITEM_REPOSITORY } from '../knowledge-base/domain/repositories/knowledge-item.repository';
@@ -69,6 +70,7 @@ import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/r
     UnlinkKnowledgeItemFromProjectUseCase,
     RecommendKnowledgeForProjectUseCase,
     RecommendProjectBasesByTagsUseCase,
+    RecommendSimilarProjectsUseCase,
     {
       provide: PROJECT_REPOSITORY,
       useClass: TypeOrmProjectRepository,

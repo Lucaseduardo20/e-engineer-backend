@@ -167,6 +167,32 @@ export interface ProjectBaseRecommendation {
   score: number;
 }
 
+export interface ProjectSimilarRecommendation {
+  project: {
+    id: string;
+    name: string;
+    client?: string | null;
+    projectType?: string | null;
+    status: string;
+    progress: number;
+  };
+  matchedTags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
+  reason: string;
+  counters: {
+    matchedTags: number;
+    deliverables: number;
+    documents: number;
+    reviews: number;
+  };
+  score: number;
+}
+
 export interface Paginated<T> {
   items: T[];
   total: number;
