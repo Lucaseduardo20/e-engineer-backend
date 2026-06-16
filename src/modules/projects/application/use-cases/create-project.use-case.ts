@@ -63,14 +63,39 @@ export class CreateProjectUseCase {
         });
       }
 
-      const clonedStructure = input.baseProjectId
-        ? await this.projectBaseStructure.cloneStructure({
-            organizationId,
-            baseProjectId: new UniqueEntityId(input.baseProjectId),
-            targetProjectId: new UniqueEntityId(project.id),
-            actorId: input.createdBy ?? 'system',
-          })
-        : null;
+      let clonedStructure: CreateProjectOutputDto['clonedStructure'] = null;
+      if (input.baseProjectId) {
+        const baseProjectId = new UniqueEntityId(input.baseProjectId);
+        const baseExists = await this.projectBaseStructure.baseProjectExists({
+          organizationId,
+          baseProjectId,
+        });
+
+        if (!baseExists) {
+          throw new Error('Base project not found.');
+        }
+
+        const copied = await this.projectBaseStructure.copyDeliverablesOnly({
+          organizationId,
+          baseProjectId,
+          targetProjectId: new UniqueEntityId(project.id),
+          actorId: input.createdBy ?? 'system',
+        });
+        await this.projectBaseStructure.saveBaseRelation({
+          organizationId,
+          baseProjectId,
+          targetProjectId: new UniqueEntityId(project.id),
+          inheritTags: false,
+          inheritDeliverables: true,
+          actorId: input.createdBy ?? 'system',
+        });
+        clonedStructure = {
+          deliverablesCopied: copied.deliverablesCopied,
+          documentsCopied: 0,
+          documentVersionsCopied: 0,
+          reviewsCopied: 0,
+        };
+      }
       await this.domainEventPublisher.publishAll(project.pullDomainEvents());
 
       return Result.ok({

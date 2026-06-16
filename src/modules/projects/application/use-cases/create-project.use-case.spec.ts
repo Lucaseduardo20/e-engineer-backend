@@ -75,6 +75,12 @@ describe('CreateProjectUseCase', () => {
     projectBaseStructure = {
       recommendByTags: jest.fn(),
       recommendSimilarProjects: jest.fn(),
+      baseProjectExists: jest.fn().mockResolvedValue(true),
+      listBaseProjectTagIds: jest.fn().mockResolvedValue([]),
+      saveBaseRelation: jest.fn().mockResolvedValue(undefined),
+      copyDeliverablesOnly: jest.fn().mockResolvedValue({
+        deliverablesCopied: 0,
+      }),
       cloneStructure: jest.fn().mockResolvedValue({
         deliverablesCopied: 0,
         documentsCopied: 0,
@@ -119,14 +125,11 @@ describe('CreateProjectUseCase', () => {
     expect(projectBaseStructure.cloneStructure).not.toHaveBeenCalled();
   });
 
-  it('creates a project from a base structure without carrying responsibilities', async () => {
+  it('creates a project from a base without copying documents or reviews', async () => {
     const organizationId = randomUUID();
     const baseProjectId = randomUUID();
-    projectBaseStructure.cloneStructure.mockResolvedValueOnce({
+    projectBaseStructure.copyDeliverablesOnly.mockResolvedValueOnce({
       deliverablesCopied: 3,
-      documentsCopied: 2,
-      documentVersionsCopied: 4,
-      reviewsCopied: 1,
     });
 
     const result = await useCase.execute({
@@ -138,7 +141,7 @@ describe('CreateProjectUseCase', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(projectBaseStructure.cloneStructure).toHaveBeenCalledWith(
+    expect(projectBaseStructure.copyDeliverablesOnly).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: expect.objectContaining({ value: organizationId }),
         baseProjectId: expect.objectContaining({ value: baseProjectId }),
@@ -146,13 +149,21 @@ describe('CreateProjectUseCase', () => {
         actorId: 'coord-1',
       }),
     );
+    expect(projectBaseStructure.cloneStructure).not.toHaveBeenCalled();
+    expect(projectBaseStructure.saveBaseRelation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inheritTags: false,
+        inheritDeliverables: true,
+        actorId: 'coord-1',
+      }),
+    );
     expect(result.unwrap()).toMatchObject({
       clonedFromProjectId: baseProjectId,
       clonedStructure: {
         deliverablesCopied: 3,
-        documentsCopied: 2,
-        documentVersionsCopied: 4,
-        reviewsCopied: 1,
+        documentsCopied: 0,
+        documentVersionsCopied: 0,
+        reviewsCopied: 0,
       },
     });
   });

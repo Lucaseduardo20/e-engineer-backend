@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Result } from '../../../../shared/application/result/result';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
+import { CreateProjectFromBaseProjectUseCase } from '../../application/use-cases/create-project-from-base-project.use-case';
 import { CreateProjectUseCase } from '../../application/use-cases/create-project.use-case';
 import { GetProjectDetailUseCase } from '../../application/use-cases/get-project-detail.use-case';
 import { GetProjectTechnicalProfileUseCase } from '../../application/use-cases/get-project-technical-profile.use-case';
@@ -27,6 +28,7 @@ function createRequest(): AuthenticatedRequest {
 
 describe('ProjectsController', () => {
   let createProjectUseCase: jest.Mocked<CreateProjectUseCase>;
+  let createProjectFromBaseProjectUseCase: jest.Mocked<CreateProjectFromBaseProjectUseCase>;
   let listProjectsUseCase: jest.Mocked<ListProjectsUseCase>;
   let getProjectDetailUseCase: jest.Mocked<GetProjectDetailUseCase>;
   let getProjectTechnicalProfileUseCase: jest.Mocked<GetProjectTechnicalProfileUseCase>;
@@ -45,6 +47,9 @@ describe('ProjectsController', () => {
     createProjectUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<CreateProjectUseCase>;
+    createProjectFromBaseProjectUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<CreateProjectFromBaseProjectUseCase>;
     listProjectsUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<ListProjectsUseCase>;
@@ -83,6 +88,7 @@ describe('ProjectsController', () => {
     } as unknown as jest.Mocked<AuditQueryService>;
     controller = new ProjectsController(
       createProjectUseCase,
+      createProjectFromBaseProjectUseCase,
       listProjectsUseCase,
       getProjectDetailUseCase,
       getProjectTechnicalProfileUseCase,
@@ -336,6 +342,69 @@ describe('ProjectsController', () => {
         createRequest(),
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates projects from a base project and records origin audit', async () => {
+    createProjectFromBaseProjectUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'project-2',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        name: 'Nova UBS',
+        projectType: 'UBS',
+        status: 'draft',
+        client: 'Prefeitura SP',
+        baseProjectId: 'project-1',
+        inheritedTags: true,
+        inheritedDeliverables: false,
+        tagIds: ['44444444-4444-4444-8444-444444444444'],
+        deliverablesCopied: 0,
+      }),
+    );
+
+    await expect(
+      controller.createFromBase(
+        {
+          baseProjectId: 'project-1',
+          name: 'Nova UBS',
+          client: 'Prefeitura SP',
+          tagIds: ['44444444-4444-4444-8444-444444444444'],
+          inheritTags: true,
+          inheritDeliverables: false,
+        },
+        createRequest(),
+      ),
+    ).resolves.toEqual({
+      data: {
+        id: 'project-2',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        name: 'Nova UBS',
+        projectType: 'UBS',
+        status: 'draft',
+        client: 'Prefeitura SP',
+        baseProjectId: 'project-1',
+        inheritedTags: true,
+        inheritedDeliverables: false,
+        tagIds: ['44444444-4444-4444-8444-444444444444'],
+        deliverablesCopied: 0,
+      },
+    });
+    expect(createProjectFromBaseProjectUseCase.execute).toHaveBeenCalledWith({
+      baseProjectId: 'project-1',
+      name: 'Nova UBS',
+      client: 'Prefeitura SP',
+      tagIds: ['44444444-4444-4444-8444-444444444444'],
+      inheritTags: true,
+      inheritDeliverables: false,
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      createdBy: 'user-1',
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'project.created_from_base',
+        entityId: 'project-2',
+        metadata: expect.objectContaining({ baseProjectId: 'project-1' }),
+      }),
+    );
   });
 
   it('updates project status and records audit entries', async () => {

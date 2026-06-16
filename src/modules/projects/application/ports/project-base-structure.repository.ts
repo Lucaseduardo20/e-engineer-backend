@@ -82,6 +82,28 @@ export interface ProjectBaseStructureRepository {
     tagIds: string[];
     limit: number;
   }): Promise<SimilarProjectRecommendation[]>;
+  baseProjectExists(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+  }): Promise<boolean>;
+  listBaseProjectTagIds(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+  }): Promise<string[]>;
+  saveBaseRelation(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    targetProjectId: UniqueEntityId;
+    inheritTags: boolean;
+    inheritDeliverables: boolean;
+    actorId: string;
+  }): Promise<void>;
+  copyDeliverablesOnly(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    targetProjectId: UniqueEntityId;
+    actorId: string;
+  }): Promise<{ deliverablesCopied: number }>;
   cloneStructure(params: {
     organizationId: OrganizationId;
     baseProjectId: UniqueEntityId;

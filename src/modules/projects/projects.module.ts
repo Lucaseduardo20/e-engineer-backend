@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedInfrastructureModule } from '../../shared/infrastructure/shared-infrastructure.module';
 import { AuditModule } from '../audit/audit.module';
+import { CreateProjectFromBaseProjectUseCase } from './application/use-cases/create-project-from-base-project.use-case';
 import { CreateProjectUseCase } from './application/use-cases/create-project.use-case';
 import { GetProjectDetailUseCase } from './application/use-cases/get-project-detail.use-case';
 import { GetProjectTechnicalProfileUseCase } from './application/use-cases/get-project-technical-profile.use-case';
@@ -25,6 +26,7 @@ import { KnowledgeAttachmentOrmEntity } from '../knowledge-base/infrastructure/p
 import { KnowledgeItemTagOrmEntity } from '../knowledge-base/infrastructure/persistence/typeorm/knowledge-item-tag.orm-entity';
 import { TechnicalTagOrmEntity } from '../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { PROJECT_REPOSITORY } from './domain/repositories/project.repository';
+import { ProjectBaseRelationOrmEntity } from './infrastructure/persistence/typeorm/project-base-relation.orm-entity';
 import { ProjectTagOrmEntity } from './infrastructure/persistence/typeorm/project-tag.orm-entity';
 import { ProjectOrmEntity } from './infrastructure/persistence/typeorm/project.orm-entity';
 import { TypeOrmProjectRepository } from './infrastructure/persistence/typeorm/typeorm-project.repository';
@@ -41,6 +43,7 @@ import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/r
   imports: [
     TypeOrmModule.forFeature([
       ProjectOrmEntity,
+      ProjectBaseRelationOrmEntity,
       ProjectTagOrmEntity,
       KnowledgeItemOrmEntity,
       KnowledgeRelationOrmEntity,
@@ -59,6 +62,7 @@ import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/r
   controllers: [ProjectsController],
   providers: [
     CreateProjectUseCase,
+    CreateProjectFromBaseProjectUseCase,
     GetProjectDetailUseCase,
     GetProjectTechnicalProfileUseCase,
     ListProjectsUseCase,

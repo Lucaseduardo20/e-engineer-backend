@@ -18,6 +18,7 @@ import type {
   SimilarProjectRecommendation,
 } from '../../application/ports/project-base-structure.repository';
 import { ProjectTagOrmEntity } from '../persistence/typeorm/project-tag.orm-entity';
+import { ProjectBaseRelationOrmEntity } from '../persistence/typeorm/project-base-relation.orm-entity';
 import { ProjectOrmEntity } from '../persistence/typeorm/project.orm-entity';
 
 const similarProjectStatuses = [
@@ -45,6 +46,8 @@ export class TypeOrmProjectBaseStructureRepository
     private readonly technicalTags: Repository<TechnicalTagOrmEntity>,
     @InjectRepository(ProjectTagOrmEntity)
     private readonly projectTags: Repository<ProjectTagOrmEntity>,
+    @InjectRepository(ProjectBaseRelationOrmEntity)
+    private readonly projectBaseRelations: Repository<ProjectBaseRelationOrmEntity>,
     @InjectRepository(DocumentOrmEntity)
     private readonly documents: Repository<DocumentOrmEntity>,
     @InjectRepository(DocumentVersionOrmEntity)
@@ -422,7 +425,7 @@ export class TypeOrmProjectBaseStructureRepository
           ...deliverable,
           id,
           projectId: targetProjectId,
-          templateDeliverableId: deliverable.id,
+          templateDeliverableId: deliverable.templateDeliverableId,
           responsibleName: null,
           assignees: [],
           createdAt: now,
@@ -514,6 +517,124 @@ export class TypeOrmProjectBaseStructureRepository
         documentVersionsCopied: copiedVersions.length,
         reviewsCopied: copiedReviews.length,
       };
+    });
+  }
+
+  baseProjectExists(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+  }): Promise<boolean> {
+    return this.projects.exists({
+      where: {
+        id: params.baseProjectId.toString(),
+        organizationId: params.organizationId.toString(),
+      },
+    });
+  }
+
+  async listBaseProjectTagIds(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+  }): Promise<string[]> {
+    const rows = await this.projectTags.find({
+      where: {
+        organizationId: params.organizationId.toString(),
+        projectId: params.baseProjectId.toString(),
+      },
+      select: {
+        tagId: true,
+      },
+    });
+
+    return [...new Set(rows.map((row) => row.tagId))];
+  }
+
+  async saveBaseRelation(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    targetProjectId: UniqueEntityId;
+    inheritTags: boolean;
+    inheritDeliverables: boolean;
+    actorId: string;
+  }): Promise<void> {
+    await this.projectBaseRelations.save({
+      id: randomUUID(),
+      organizationId: params.organizationId.toString(),
+      baseProjectId: params.baseProjectId.toString(),
+      targetProjectId: params.targetProjectId.toString(),
+      relationType: 'created_from_base',
+      inheritTags: params.inheritTags,
+      inheritDeliverables: params.inheritDeliverables,
+      createdBy: params.actorId,
+    });
+  }
+
+  async copyDeliverablesOnly(params: {
+    organizationId: OrganizationId;
+    baseProjectId: UniqueEntityId;
+    targetProjectId: UniqueEntityId;
+    actorId: string;
+  }): Promise<{ deliverablesCopied: number }> {
+    const organizationId = params.organizationId.toString();
+    const baseProjectId = params.baseProjectId.toString();
+    const targetProjectId = params.targetProjectId.toString();
+
+    return this.projects.manager.transaction(async (manager) => {
+      const sourceDeliverables = await manager.find(DeliverableOrmEntity, {
+        where: { projectId: baseProjectId, organizationId },
+        order: { name: 'ASC' },
+      });
+      const sourceDeliverableIds = sourceDeliverables.map((item) => item.id);
+      const sourceTags = sourceDeliverableIds.length
+        ? await manager.find(DeliverableTagOrmEntity, {
+            where: {
+              organizationId,
+              deliverableId: In(sourceDeliverableIds),
+            },
+          })
+        : [];
+      const deliverableIdMap = new Map<string, string>();
+      const now = new Date();
+      const copiedDeliverables = sourceDeliverables.map((deliverable) => {
+        const id = randomUUID();
+        deliverableIdMap.set(deliverable.id, id);
+        return manager.create(DeliverableOrmEntity, {
+          id,
+          organizationId,
+          projectId: targetProjectId,
+          templateDeliverableId: deliverable.templateDeliverableId,
+          name: deliverable.name,
+          description: deliverable.description,
+          status: 'todo',
+          type: deliverable.type,
+          responsibleName: null,
+          assignees: [],
+          dueDate: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+
+      await manager.save(DeliverableOrmEntity, copiedDeliverables);
+
+      const copiedTags = sourceTags
+        .map((tag) => {
+          const deliverableId = deliverableIdMap.get(tag.deliverableId);
+          if (!deliverableId) return null;
+          return manager.create(DeliverableTagOrmEntity, {
+            id: randomUUID(),
+            organizationId,
+            deliverableId,
+            tagId: tag.tagId,
+            createdBy: params.actorId,
+            createdAt: now,
+          });
+        })
+        .filter((tag): tag is DeliverableTagOrmEntity => Boolean(tag));
+
+      await manager.save(DeliverableTagOrmEntity, copiedTags);
+
+      return { deliverablesCopied: copiedDeliverables.length };
     });
   }
 

@@ -12,6 +12,7 @@ export class ProjectMapper {
         name: ormEntity.name,
         projectType: ormEntity.projectType,
         status: ProjectStatus.create(ormEntity.status),
+        client: ormEntity.client,
       },
       new UniqueEntityId(ormEntity.id),
     );
@@ -23,6 +24,7 @@ export class ProjectMapper {
     ormEntity.id = project.id;
     ormEntity.organizationId = project.organizationId.toString();
     ormEntity.name = project.name;
+    ormEntity.client = project.client;
     ormEntity.projectType = project.projectType;
     ormEntity.status = project.status.value;
 

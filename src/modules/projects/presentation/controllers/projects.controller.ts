@@ -48,6 +48,8 @@ import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cas
 import { RecommendKnowledgeForProjectUseCase } from '../../application/use-cases/recommend-knowledge-for-project.use-case';
 import { RecommendProjectBasesByTagsUseCase } from '../../application/use-cases/recommend-project-bases-by-tags.use-case';
 import { RecommendSimilarProjectsUseCase } from '../../application/use-cases/recommend-similar-projects.use-case';
+import { CreateProjectFromBaseProjectUseCase } from '../../application/use-cases/create-project-from-base-project.use-case';
+import { CreateProjectFromBaseRequestDto } from '../dto/create-project-from-base.request.dto';
 import { LinkProjectKnowledgeDto } from '../dto/link-project-knowledge.dto';
 import { RecommendProjectBasesDto } from '../dto/recommend-project-bases.dto';
 import { RecommendSimilarProjectsDto } from '../dto/recommend-similar-projects.dto';
@@ -60,6 +62,7 @@ import type { ProjectTechnicalProfileResponseDto } from '../../application/dto/p
 export class ProjectsController {
   constructor(
     private readonly createProjectUseCase: CreateProjectUseCase,
+    private readonly createProjectFromBaseProjectUseCase: CreateProjectFromBaseProjectUseCase,
     private readonly listProjectsUseCase: ListProjectsUseCase,
     private readonly getProjectDetailUseCase: GetProjectDetailUseCase,
     private readonly getProjectTechnicalProfileUseCase: GetProjectTechnicalProfileUseCase,
@@ -280,6 +283,45 @@ export class ProjectsController {
       entityId: project.id,
       description: 'Projeto tecnico criado',
       metadata: { name: project.name },
+    });
+
+    return ok(project);
+  }
+
+  @Post('from-base')
+  @ApiCreatedResponse({ description: 'Projeto tecnico criado a partir de base.' })
+  async createFromBase(
+    @Body() body: CreateProjectFromBaseRequestDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<unknown>> {
+    const result = await this.createProjectFromBaseProjectUseCase.execute({
+      ...body,
+      organizationId: request.user.organizationId,
+      createdBy: request.user.userId,
+    });
+
+    if (result.isFail()) {
+      const error = result.unwrapError();
+      if (error.message === 'Base project not found.') {
+        throw new NotFoundException(error.message);
+      }
+      throw new BadRequestException(error.message);
+    }
+
+    const project = result.unwrap();
+    await this.audit.record({
+      organizationId: request.user.organizationId,
+      actorName: request.user.userId,
+      action: 'project.created_from_base',
+      entityType: 'project',
+      entityId: project.id,
+      description: 'Projeto tecnico criado a partir de projeto existente',
+      metadata: {
+        name: project.name,
+        baseProjectId: project.baseProjectId,
+        inheritTags: project.inheritedTags,
+        inheritDeliverables: project.inheritedDeliverables,
+      },
     });
 
     return ok(project);
