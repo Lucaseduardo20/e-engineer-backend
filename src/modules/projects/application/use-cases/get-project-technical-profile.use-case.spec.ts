@@ -1,0 +1,149 @@
+import { randomUUID } from 'crypto';
+import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
+import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
+import type {
+  Paginated,
+  Project as ProjectContract,
+} from '../../../../shared/contracts/dashboard.contracts';
+import { Project } from '../../domain/entities/project';
+import type {
+  ProjectRepository,
+  ProjectTechnicalProfileTagSource,
+} from '../../domain/repositories/project.repository';
+import { ProjectTechnicalProfileScoreService } from '../services/project-technical-profile-score.service';
+import { GetProjectTechnicalProfileUseCase } from './get-project-technical-profile.use-case';
+
+class InMemoryProjectRepository implements ProjectRepository {
+  project: Project | null = null;
+  tagSources: ProjectTechnicalProfileTagSource[] = [];
+
+  save(project: Project): Promise<void> {
+    this.project = project;
+    return Promise.resolve();
+  }
+
+  syncTags(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  ensureSelectableTags(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  list(): Promise<Paginated<ProjectContract>> {
+    return Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 });
+  }
+
+  getById(): Promise<ProjectContract | null> {
+    return Promise.resolve(null);
+  }
+
+  findById(
+    _projectId: UniqueEntityId,
+    organizationId: OrganizationId,
+  ): Promise<Project | null> {
+    if (!this.project) return Promise.resolve(null);
+    if (this.project.organizationId.toString() !== organizationId.toString()) {
+      return Promise.resolve(null);
+    }
+
+    return Promise.resolve(this.project);
+  }
+
+  listTechnicalProfileTagSources(): Promise<ProjectTechnicalProfileTagSource[]> {
+    return Promise.resolve(
+      this.tagSources.filter((tagSource) => tagSource.status !== 'archived'),
+    );
+  }
+}
+
+describe('GetProjectTechnicalProfileUseCase', () => {
+  let repository: InMemoryProjectRepository;
+  let useCase: GetProjectTechnicalProfileUseCase;
+  let organizationId: string;
+
+  beforeEach(() => {
+    organizationId = randomUUID();
+    repository = new InMemoryProjectRepository();
+    repository.project = Project.create({
+      organizationId: OrganizationId.create(organizationId),
+      name: 'UBS Vila Esperanca',
+      projectType: 'UBS',
+    });
+    useCase = new GetProjectTechnicalProfileUseCase(
+      repository,
+      new ProjectTechnicalProfileScoreService(),
+    );
+  });
+
+  it('returns direct project tags with deterministic score and source', async () => {
+    const tagId = randomUUID();
+    repository.tagSources = [
+      {
+        tagId,
+        name: 'UBS',
+        slug: 'ubs',
+        category: 'project_type',
+        status: 'active',
+        source: 'manual',
+      },
+    ];
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId: repository.project!.id,
+    });
+
+    expect(result).toMatchObject({
+      projectId: repository.project!.id,
+      organizationId,
+      scoreExplanation: 'Tag direta no projeto: +3.',
+      tags: [
+        {
+          id: tagId,
+          name: 'UBS',
+          score: 3,
+          sources: [{ type: 'project_tag', score: 3 }],
+        },
+      ],
+    });
+  });
+
+  it('returns an empty profile for projects without tags', async () => {
+    const result = await useCase.execute({
+      organizationId,
+      projectId: repository.project!.id,
+    });
+
+    expect(result?.tags).toEqual([]);
+  });
+
+  it('omits archived tags from the profile', async () => {
+    repository.tagSources = [
+      {
+        tagId: randomUUID(),
+        name: 'Obsoleta',
+        slug: 'obsoleta',
+        category: 'project_type',
+        status: 'archived',
+        source: 'manual',
+      },
+    ];
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId: repository.project!.id,
+    });
+
+    expect(result?.tags).toEqual([]);
+  });
+
+  it('returns null when project is outside the current tenant', async () => {
+    const result = await useCase.execute({
+      organizationId: randomUUID(),
+      projectId: repository.project!.id,
+    });
+
+    expect(result).toBeNull();
+  });
+});

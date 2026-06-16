@@ -78,4 +78,22 @@ export class Project extends AggregateRoot<ProjectProps> {
   updateStatus(status: ProjectStatus): void {
     this.props.status = status;
   }
+
+  updateDetails(params: { name?: string; projectType?: string }): void {
+    if (params.name !== undefined) {
+      const name = params.name.trim();
+      if (!name) {
+        throw new InvalidProjectNameError();
+      }
+      this.props.name = name;
+    }
+
+    if (params.projectType !== undefined) {
+      const projectType = params.projectType.trim();
+      if (!projectType) {
+        throw new InvalidProjectTypeError();
+      }
+      this.props.projectType = projectType;
+    }
+  }
 }

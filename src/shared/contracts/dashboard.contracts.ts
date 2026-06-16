@@ -29,8 +29,38 @@ export interface Project {
   startDate?: string;
   endDate?: string;
   progress: number;
-  tags?: string[];
+  tagIds?: string[];
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
+  legacyTags?: string[];
   metrics?: Record<string, number>;
+}
+
+export interface ProjectTechnicalProfileSource {
+  type: 'project_tag';
+  score: number;
+}
+
+export interface ProjectTechnicalProfileTag {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  status: string;
+  score: number;
+  sources: ProjectTechnicalProfileSource[];
+}
+
+export interface ProjectTechnicalProfile {
+  projectId: string;
+  organizationId: string;
+  scoreExplanation: string;
+  tags: ProjectTechnicalProfileTag[];
 }
 
 export interface Deliverable {
@@ -95,6 +125,46 @@ export interface ProjectKnowledgeRecommendation {
   }>;
   score: number;
   reason: string;
+}
+
+export interface ProjectBaseRecommendation {
+  project: {
+    id: string;
+    name: string;
+    client?: string | null;
+    projectType?: string | null;
+    status: string;
+    progress: number;
+  };
+  matchedTags: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
+  deliverablesPreview: Array<{
+    id: string;
+    title: string;
+    type: string;
+    status: string;
+    tags: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+      status: string;
+    }>;
+  }>;
+  documentsPreview: Array<{
+    id: string;
+    title: string;
+    type: string;
+    status: string;
+    versionsCount: number;
+  }>;
+  reviewsCount: number;
+  score: number;
 }
 
 export interface Paginated<T> {

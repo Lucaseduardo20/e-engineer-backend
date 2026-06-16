@@ -1116,6 +1116,57 @@ async function seedTechnicalTags(query: Query): Promise<void> {
   }
 }
 
+async function seedProjectTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const projectTags = new Map<string, string[]>([
+    [
+      projects[0].id,
+      ['Reforma escolar', 'Prefeitura SP', 'Acessibilidade', 'Projeto executivo'],
+    ],
+    [
+      projects[1].id,
+      ['UBS', 'Prefeitura SP', 'Obra publica', 'Orcamento', 'Projeto executivo'],
+    ],
+    [
+      projects[2].id,
+      ['Praca publica', 'Zeladoria urbana', 'Orcamento', 'Projeto basico'],
+    ],
+    [
+      projects[3].id,
+      ['Pavimentacao', 'Drenagem', 'Orgao publico', 'Planilha orcamentaria'],
+    ],
+    [
+      projects[4].id,
+      ['Drenagem', 'Orgao publico', 'Projeto executivo', 'Revisao'],
+    ],
+  ]);
+
+  for (const [projectId, tagNames] of projectTags.entries()) {
+    const uniqueTagNames = [...new Set(tagNames)];
+
+    for (const tagName of uniqueTagNames) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO project_tags (
+            id, organization_id, project_id, tag_id, source, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, 'manual', $5, now())
+          ON CONFLICT (organization_id, project_id, tag_id) DO UPDATE SET
+            source = EXCLUDED.source
+        `,
+        [
+          uuidFromText(`project-tag:${organizationId}:${projectId}:${slug}`),
+          organizationId,
+          projectId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await dataSource.initialize();
 
@@ -1131,6 +1182,7 @@ async function main(): Promise<void> {
       await seedKnowledgeBase(query);
       await seedKnowledgeRelations(query);
       await seedTechnicalTags(query);
+      await seedProjectTags(query);
       await seedActivityLog(query);
     });
 

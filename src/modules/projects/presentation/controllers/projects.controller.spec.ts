@@ -4,8 +4,15 @@ import type { AuthenticatedRequest } from '../../../../shared/infrastructure/aut
 import { AuditQueryService } from '../../../audit/infrastructure/repositories/audit-query.service';
 import { CreateProjectUseCase } from '../../application/use-cases/create-project.use-case';
 import { GetProjectDetailUseCase } from '../../application/use-cases/get-project-detail.use-case';
+import { GetProjectTechnicalProfileUseCase } from '../../application/use-cases/get-project-technical-profile.use-case';
 import { ListProjectsUseCase } from '../../application/use-cases/list-projects.use-case';
+import { UpdateProjectUseCase } from '../../application/use-cases/update-project.use-case';
 import { UpdateProjectStatusUseCase } from '../../application/use-cases/update-project-status.use-case';
+import { ListProjectKnowledgeItemsUseCase } from '../../application/use-cases/list-project-knowledge-items.use-case';
+import { LinkKnowledgeItemToProjectUseCase } from '../../application/use-cases/link-knowledge-item-to-project.use-case';
+import { UnlinkKnowledgeItemFromProjectUseCase } from '../../application/use-cases/unlink-knowledge-item-from-project.use-case';
+import { RecommendKnowledgeForProjectUseCase } from '../../application/use-cases/recommend-knowledge-for-project.use-case';
+import { RecommendProjectBasesByTagsUseCase } from '../../application/use-cases/recommend-project-bases-by-tags.use-case';
 import { ProjectsController } from './projects.controller';
 
 function createRequest(): AuthenticatedRequest {
@@ -21,7 +28,14 @@ describe('ProjectsController', () => {
   let createProjectUseCase: jest.Mocked<CreateProjectUseCase>;
   let listProjectsUseCase: jest.Mocked<ListProjectsUseCase>;
   let getProjectDetailUseCase: jest.Mocked<GetProjectDetailUseCase>;
+  let getProjectTechnicalProfileUseCase: jest.Mocked<GetProjectTechnicalProfileUseCase>;
+  let updateProjectUseCase: jest.Mocked<UpdateProjectUseCase>;
   let updateProjectStatusUseCase: jest.Mocked<UpdateProjectStatusUseCase>;
+  let listProjectKnowledgeItemsUseCase: jest.Mocked<ListProjectKnowledgeItemsUseCase>;
+  let linkKnowledgeItemToProjectUseCase: jest.Mocked<LinkKnowledgeItemToProjectUseCase>;
+  let unlinkKnowledgeItemFromProjectUseCase: jest.Mocked<UnlinkKnowledgeItemFromProjectUseCase>;
+  let recommendKnowledgeForProjectUseCase: jest.Mocked<RecommendKnowledgeForProjectUseCase>;
+  let recommendProjectBasesByTagsUseCase: jest.Mocked<RecommendProjectBasesByTagsUseCase>;
   let audit: jest.Mocked<AuditQueryService>;
   let controller: ProjectsController;
 
@@ -35,9 +49,30 @@ describe('ProjectsController', () => {
     getProjectDetailUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<GetProjectDetailUseCase>;
+    getProjectTechnicalProfileUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetProjectTechnicalProfileUseCase>;
+    updateProjectUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UpdateProjectUseCase>;
     updateProjectStatusUseCase = {
       execute: jest.fn(),
     } as unknown as jest.Mocked<UpdateProjectStatusUseCase>;
+    listProjectKnowledgeItemsUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<ListProjectKnowledgeItemsUseCase>;
+    linkKnowledgeItemToProjectUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<LinkKnowledgeItemToProjectUseCase>;
+    unlinkKnowledgeItemFromProjectUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<UnlinkKnowledgeItemFromProjectUseCase>;
+    recommendKnowledgeForProjectUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<RecommendKnowledgeForProjectUseCase>;
+    recommendProjectBasesByTagsUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<RecommendProjectBasesByTagsUseCase>;
     audit = {
       record: jest.fn(),
     } as unknown as jest.Mocked<AuditQueryService>;
@@ -45,8 +80,15 @@ describe('ProjectsController', () => {
       createProjectUseCase,
       listProjectsUseCase,
       getProjectDetailUseCase,
+      getProjectTechnicalProfileUseCase,
+      updateProjectUseCase,
       updateProjectStatusUseCase,
       audit,
+      listProjectKnowledgeItemsUseCase,
+      linkKnowledgeItemToProjectUseCase,
+      unlinkKnowledgeItemFromProjectUseCase,
+      recommendKnowledgeForProjectUseCase,
+      recommendProjectBasesByTagsUseCase,
     );
   });
 
@@ -97,12 +139,73 @@ describe('ProjectsController', () => {
     });
   });
 
+  it('recommends project bases using tenant and selected tags', async () => {
+    recommendProjectBasesByTagsUseCase.execute.mockResolvedValue({ items: [] });
+
+    await expect(
+      controller.recommendBases(
+        { tagIds: ['44444444-4444-4444-8444-444444444444'] },
+        createRequest(),
+      ),
+    ).resolves.toEqual({ data: { items: [] } });
+
+    expect(recommendProjectBasesByTagsUseCase.execute).toHaveBeenCalledWith({
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      tagIds: ['44444444-4444-4444-8444-444444444444'],
+      limit: undefined,
+    });
+  });
+
   it('maps missing project details to not found', async () => {
     getProjectDetailUseCase.execute.mockResolvedValue(null);
 
     await expect(
       controller.detail('project-1', createRequest()),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('returns the project technical profile using the active tenant', async () => {
+    getProjectTechnicalProfileUseCase.execute.mockResolvedValue({
+      projectId: 'project-1',
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      scoreExplanation: 'Tag direta no projeto: +3.',
+      tags: [
+        {
+          id: '44444444-4444-4444-8444-444444444444',
+          name: 'UBS',
+          slug: 'ubs',
+          category: 'project_type',
+          status: 'active',
+          score: 3,
+          sources: [{ type: 'project_tag', score: 3 }],
+        },
+      ],
+    });
+
+    await expect(
+      controller.technicalProfile('project-1', createRequest()),
+    ).resolves.toEqual({
+      data: {
+        projectId: 'project-1',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        scoreExplanation: 'Tag direta no projeto: +3.',
+        tags: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            name: 'UBS',
+            slug: 'ubs',
+            category: 'project_type',
+            status: 'active',
+            score: 3,
+            sources: [{ type: 'project_tag', score: 3 }],
+          },
+        ],
+      },
+    });
+    expect(getProjectTechnicalProfileUseCase.execute).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+    });
   });
 
   it('creates projects and records audit entries', async () => {
@@ -182,6 +285,72 @@ describe('ProjectsController', () => {
       expect.objectContaining({
         action: 'project.status.updated',
         entityId: 'project-1',
+      }),
+    );
+  });
+
+  it('updates project tags and records audit entries', async () => {
+    updateProjectUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'project-1',
+        name: 'Ponte Norte',
+        status: 'active',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        progress: 35,
+        tagIds: ['44444444-4444-4444-8444-444444444444'],
+        tags: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            name: 'Drenagem',
+            slug: 'drenagem',
+            category: 'project_type',
+            status: 'active',
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      controller.update(
+        'project-1',
+        { tagIds: ['44444444-4444-4444-8444-444444444444'] },
+        createRequest(),
+      ),
+    ).resolves.toEqual({
+      data: {
+        id: 'project-1',
+        name: 'Ponte Norte',
+        status: 'active',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        progress: 35,
+        tagIds: ['44444444-4444-4444-8444-444444444444'],
+        tags: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            name: 'Drenagem',
+            slug: 'drenagem',
+            category: 'project_type',
+            status: 'active',
+          },
+        ],
+      },
+    });
+    expect(updateProjectUseCase.execute).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      name: undefined,
+      projectType: undefined,
+      tagIds: ['44444444-4444-4444-8444-444444444444'],
+      updatedBy: 'user-1',
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'project.updated',
+        entityId: 'project-1',
+        metadata: {
+          name: 'Ponte Norte',
+          tagIds: ['44444444-4444-4444-8444-444444444444'],
+        },
       }),
     );
   });
