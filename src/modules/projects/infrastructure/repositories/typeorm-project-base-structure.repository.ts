@@ -7,6 +7,7 @@ import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-e
 import { DeliverableTagOrmEntity } from '../../../deliverables/infrastructure/persistence/typeorm/deliverable-tag.orm-entity';
 import { DeliverableOrmEntity } from '../../../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { DocumentVersionOrmEntity } from '../../../documents/infrastructure/persistence/typeorm/document-version.orm-entity';
+import { DocumentTagOrmEntity } from '../../../documents/infrastructure/persistence/typeorm/document-tag.orm-entity';
 import { DocumentOrmEntity } from '../../../documents/infrastructure/persistence/typeorm/document.orm-entity';
 import { KnowledgeItemTagOrmEntity } from '../../../knowledge-base/infrastructure/persistence/typeorm/knowledge-item-tag.orm-entity';
 import { KnowledgeRelationOrmEntity } from '../../../knowledge-base/infrastructure/persistence/typeorm/knowledge-relation.orm-entity';
@@ -69,6 +70,27 @@ export class TypeOrmProjectBaseStructureRepository
       return [];
     }
 
+    const projectTagRows = await this.projects
+      .createQueryBuilder('project')
+      .innerJoin(
+        ProjectTagOrmEntity,
+        'projectTag',
+        'projectTag.project_id = project.id AND projectTag.organization_id = project.organization_id',
+      )
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = projectTag.tag_id AND tag.organization_id = project.organization_id',
+      )
+      .select('project.id', 'projectId')
+      .addSelect('projectTag.tag_id', 'tagId')
+      .where('project.organizationId = :organizationId', { organizationId })
+      .andWhere('project.status IN (:...statuses)', {
+        statuses: ['active', 'completed'],
+      })
+      .andWhere('projectTag.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .getRawMany<{ projectId: string; tagId: string }>();
     const deliverableRows = await this.projects
       .createQueryBuilder('project')
       .innerJoin(
@@ -81,18 +103,47 @@ export class TypeOrmProjectBaseStructureRepository
         'deliverableTag',
         'deliverableTag.deliverable_id = deliverable.id AND deliverableTag.organization_id = project.organization_id',
       )
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = deliverableTag.tag_id AND tag.organization_id = project.organization_id',
+      )
       .select('project.id', 'projectId')
-      .addSelect('COUNT(DISTINCT deliverableTag.tag_id)', 'matchedCount')
+      .addSelect('deliverableTag.tag_id', 'tagId')
       .where('project.organizationId = :organizationId', { organizationId })
       .andWhere('project.status IN (:...statuses)', {
         statuses: ['active', 'completed'],
       })
       .andWhere('deliverableTag.tag_id IN (:...tagIds)', { tagIds })
-      .groupBy('project.id')
-      .orderBy('"matchedCount"', 'DESC')
-      .addOrderBy('project.updatedAt', 'DESC')
-      .limit(params.limit)
-      .getRawMany<{ projectId: string; matchedCount: string }>();
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .getRawMany<{ projectId: string; tagId: string }>();
+    const documentRows = await this.projects
+      .createQueryBuilder('project')
+      .innerJoin(
+        DocumentOrmEntity,
+        'document',
+        'document.project_id = project.id AND document.organization_id = project.organization_id',
+      )
+      .innerJoin(
+        DocumentTagOrmEntity,
+        'documentTag',
+        'documentTag.document_id = document.id AND documentTag.organization_id = project.organization_id',
+      )
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = documentTag.tag_id AND tag.organization_id = project.organization_id',
+      )
+      .select('project.id', 'projectId')
+      .addSelect('documentTag.tag_id', 'tagId')
+      .addSelect(`CASE WHEN document.status = 'approved' THEN 3 ELSE 1 END`, 'weight')
+      .where('project.organizationId = :organizationId', { organizationId })
+      .andWhere('project.status IN (:...statuses)', {
+        statuses: ['active', 'completed'],
+      })
+      .andWhere('documentTag.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .getRawMany<{ projectId: string; tagId: string; weight: string }>();
     const knowledgeRows = await this.projects
       .createQueryBuilder('project')
       .leftJoin(
@@ -114,6 +165,11 @@ export class TypeOrmProjectBaseStructureRepository
         'knowledgeTag',
         'knowledgeTag.knowledge_item_id = knowledgeRelation.knowledge_item_id AND knowledgeTag.organization_id = project.organization_id',
       )
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = knowledgeTag.tag_id AND tag.organization_id = project.organization_id',
+      )
       .select('project.id', 'projectId')
       .addSelect('knowledgeTag.tag_id', 'tagId')
       .where('project.organizationId = :organizationId', { organizationId })
@@ -121,31 +177,39 @@ export class TypeOrmProjectBaseStructureRepository
         statuses: ['active', 'completed'],
       })
       .andWhere('knowledgeTag.tag_id IN (:...tagIds)', { tagIds })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
       .getRawMany<{ projectId: string; tagId: string }>();
     const matchedTagIdsByProject = new Map<string, Set<string>>();
-
-    for (const row of knowledgeRows) {
-      const current = matchedTagIdsByProject.get(row.projectId) ?? new Set<string>();
-      current.add(row.tagId);
-      matchedTagIdsByProject.set(row.projectId, current);
-    }
     const projectScores = new Map<string, number>();
 
-    for (const row of deliverableRows) {
-      projectScores.set(row.projectId, Number(row.matchedCount) * 10);
+    const addSignal = (projectId: string, tagId: string, score: number) => {
+      const current = matchedTagIdsByProject.get(projectId) ?? new Set<string>();
+      current.add(tagId);
+      matchedTagIdsByProject.set(projectId, current);
+      projectScores.set(projectId, (projectScores.get(projectId) ?? 0) + score);
+    };
+
+    for (const row of projectTagRows) {
+      addSignal(row.projectId, row.tagId, 30);
     }
 
-    for (const [projectId, tags] of matchedTagIdsByProject) {
-      projectScores.set(
-        projectId,
-        Math.max(projectScores.get(projectId) ?? 0, tags.size * 10),
-      );
+    for (const row of deliverableRows) {
+      addSignal(row.projectId, row.tagId, 20);
+    }
+
+    for (const row of documentRows) {
+      addSignal(row.projectId, row.tagId, Number(row.weight) * 10);
+    }
+
+    for (const row of knowledgeRows) {
+      addSignal(row.projectId, row.tagId, 20);
     }
 
     const projectIds = [...projectScores.keys()]
       .sort(
         (first, second) =>
-          (projectScores.get(second) ?? 0) - (projectScores.get(first) ?? 0),
+          (projectScores.get(second) ?? 0) - (projectScores.get(first) ?? 0) ||
+          first.localeCompare(second),
       )
       .slice(0, params.limit);
     if (!projectIds.length) {
