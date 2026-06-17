@@ -12,6 +12,7 @@ import { CreateReviewUseCase } from '../../application/use-cases/create-review.u
 import { GetReviewUseCase } from '../../application/use-cases/get-review.use-case';
 import { ListReviewsUseCase } from '../../application/use-cases/list-reviews.use-case';
 import { RejectReviewUseCase } from '../../application/use-cases/reject-review.use-case';
+import { RegisterReviewAsLessonLearnedUseCase } from '../../application/use-cases/register-review-as-lesson-learned.use-case';
 import { ReviewsController } from './reviews.controller';
 
 function createRequest(): AuthenticatedRequest {
@@ -48,6 +49,7 @@ describe('ReviewsController', () => {
   let approveReviewUseCase: jest.Mocked<ApproveReviewUseCase>;
   let rejectReviewUseCase: jest.Mocked<RejectReviewUseCase>;
   let addReviewCommentUseCase: jest.Mocked<AddReviewCommentUseCase>;
+  let registerReviewAsLessonLearnedUseCase: jest.Mocked<RegisterReviewAsLessonLearnedUseCase>;
   let audit: jest.Mocked<AuditQueryService>;
   let controller: ReviewsController;
 
@@ -58,6 +60,7 @@ describe('ReviewsController', () => {
     approveReviewUseCase = { execute: jest.fn() } as never;
     rejectReviewUseCase = { execute: jest.fn() } as never;
     addReviewCommentUseCase = { execute: jest.fn() } as never;
+    registerReviewAsLessonLearnedUseCase = { execute: jest.fn() } as never;
     audit = { record: jest.fn() } as never;
     controller = new ReviewsController(
       createReviewUseCase,
@@ -66,6 +69,7 @@ describe('ReviewsController', () => {
       approveReviewUseCase,
       rejectReviewUseCase,
       addReviewCommentUseCase,
+      registerReviewAsLessonLearnedUseCase,
       audit,
     );
   });

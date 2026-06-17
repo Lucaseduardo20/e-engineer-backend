@@ -20,6 +20,17 @@ export interface ListDocumentsParams {
 
 export interface DocumentRepository {
   save(document: Document): Promise<void>;
+  syncTags(params: {
+    documentId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+    source?: string;
+  }): Promise<void>;
+  ensureSelectableTags(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+  }): Promise<void>;
   list(
     organizationId: OrganizationId,
     params: ListDocumentsParams,

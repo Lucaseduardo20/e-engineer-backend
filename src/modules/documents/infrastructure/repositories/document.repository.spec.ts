@@ -22,11 +22,15 @@ describe('TypeOrmDocumentRepository', () => {
     };
     const projects = { exists: jest.fn().mockResolvedValue(true) };
     const deliverables = { exists: jest.fn().mockResolvedValue(true) };
+    const documentTags = {};
+    const technicalTags = {};
     const repository = new TypeOrmDocumentRepository(
       documents as never,
       versions as never,
       projects as never,
       deliverables as never,
+      documentTags as never,
+      technicalTags as never,
     );
 
     return { deliverables, projects, queryBuilder, repository };

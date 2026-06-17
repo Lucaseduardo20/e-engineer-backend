@@ -1222,6 +1222,50 @@ async function seedDeliverableTags(query: Query): Promise<void> {
   }
 }
 
+async function seedDocumentTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const documentTags = new Map<string, string[]>([
+    ['Projeto arquitetonico', ['Arquitetura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Memorial Descritivo - Reforma Escolar', ['Memorial descritivo', 'Documento modelo', 'Prefeitura SP']],
+    ['Planilha Orcamentaria - UBS Vila Esperanca', ['Orcamento', 'Planilha orcamentaria', 'Quantitativos divergentes']],
+    ['Projeto de drenagem', ['Drenagem', 'Projeto executivo', 'Orgao publico']],
+  ]);
+
+  const seededDocuments = [
+    { project: projects[0], title: 'Projeto arquitetonico' },
+    { project: projects[0], title: 'Memorial Descritivo - Reforma Escolar' },
+    { project: projects[1], title: 'Planilha Orcamentaria - UBS Vila Esperanca' },
+    { project: projects[3], title: 'Projeto de drenagem' },
+  ];
+
+  for (const document of seededDocuments) {
+    const documentId = uuidFromText(
+      `document:${document.project.id}:${document.title}`,
+    );
+
+    for (const tagName of [...new Set(documentTags.get(document.title) ?? [])]) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO document_tags (
+            id, organization_id, document_id, tag_id, source, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, 'manual', $5, now())
+          ON CONFLICT (organization_id, document_id, tag_id) DO UPDATE SET
+            source = EXCLUDED.source
+        `,
+        [
+          uuidFromText(`document-tag:${organizationId}:${documentId}:${slug}`),
+          organizationId,
+          documentId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await dataSource.initialize();
 
@@ -1239,6 +1283,7 @@ async function main(): Promise<void> {
       await seedTechnicalTags(query);
       await seedProjectTags(query);
       await seedDeliverableTags(query);
+      await seedDocumentTags(query);
       await seedActivityLog(query);
     });
 

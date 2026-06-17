@@ -31,11 +31,15 @@ describe('TypeOrmProjectRepository', () => {
     const deliverableTagsRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(tagQueryBuilder),
     };
+    const documentTagsRepository = {
+      createQueryBuilder: jest.fn().mockReturnValue(tagQueryBuilder),
+    };
     const repository = new TypeOrmProjectRepository(
       ormRepository as never,
       projectTagsRepository as never,
       technicalTagsRepository as never,
       deliverableTagsRepository as never,
+      documentTagsRepository as never,
     );
 
     return { queryBuilder, tagQueryBuilder, ormRepository, repository };

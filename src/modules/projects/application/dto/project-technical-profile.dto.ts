@@ -1,5 +1,5 @@
 export interface ProjectTechnicalProfileSourceDto {
-  type: 'project_tag' | 'deliverable_tag';
+  type: 'project_tag' | 'deliverable_tag' | 'document_tag' | 'official_document';
   score: number;
 }
 

@@ -18,6 +18,7 @@ import { ListDocumentsUseCase } from './application/use-cases/list-documents.use
 import { UpdateDocumentUseCase } from './application/use-cases/update-document.use-case';
 import { UploadDocumentVersionUseCase } from './application/use-cases/upload-document-version.use-case';
 import { DOCUMENT_REPOSITORY } from './domain/repositories/document.repository';
+import { DocumentTagOrmEntity } from './infrastructure/persistence/typeorm/document-tag.orm-entity';
 import { DocumentOrmEntity } from './infrastructure/persistence/typeorm/document.orm-entity';
 import { DocumentVersionOrmEntity } from './infrastructure/persistence/typeorm/document-version.orm-entity';
 import { TypeOrmDocumentRepository } from './infrastructure/repositories/document.repository';
@@ -30,6 +31,7 @@ import { SaveDocumentAsKnowledgeModelUseCase } from './application/use-cases/sav
     SharedInfrastructureModule,
     TypeOrmModule.forFeature([
       DocumentOrmEntity,
+      DocumentTagOrmEntity,
       DocumentVersionOrmEntity,
       ProjectOrmEntity,
       DeliverableOrmEntity,

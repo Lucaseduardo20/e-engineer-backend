@@ -38,6 +38,7 @@ import { TypeOrmDeliverableRepository } from '../deliverables/infrastructure/rep
 import { DeliverableTagOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable-tag.orm-entity';
 import { DeliverableRemovalRequestOrmEntity } from '../deliverables/infrastructure/persistence/typeorm/deliverable-removal-request.orm-entity';
 import { DocumentOrmEntity } from '../documents/infrastructure/persistence/typeorm/document.orm-entity';
+import { DocumentTagOrmEntity } from '../documents/infrastructure/persistence/typeorm/document-tag.orm-entity';
 import { DocumentVersionOrmEntity } from '../documents/infrastructure/persistence/typeorm/document-version.orm-entity';
 import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/review.orm-entity';
 
@@ -57,6 +58,7 @@ import { ReviewOrmEntity } from '../reviews/infrastructure/persistence/typeorm/r
       DeliverableOrmEntity,
       DeliverableRemovalRequestOrmEntity,
       DocumentOrmEntity,
+      DocumentTagOrmEntity,
       DocumentVersionOrmEntity,
       ReviewOrmEntity,
     ]),

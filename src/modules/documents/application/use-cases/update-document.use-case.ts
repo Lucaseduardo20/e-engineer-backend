@@ -19,6 +19,8 @@ export interface UpdateDocumentInput {
   description?: string | null;
   type?: string;
   status?: string;
+  tagIds?: string[];
+  updatedBy?: string;
 }
 
 @Injectable()
@@ -41,6 +43,13 @@ export class UpdateDocumentUseCase {
 
       if (!document) {
         throw new Error('Document not found.');
+      }
+
+      if (input.tagIds) {
+        await this.documentRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
       }
 
       const deliverableId =
@@ -73,7 +82,21 @@ export class UpdateDocumentUseCase {
 
       await this.documentRepository.save(document);
 
-      return Result.ok(DocumentMapper.toResponse(document));
+      if (input.tagIds) {
+        await this.documentRepository.syncTags({
+          organizationId,
+          documentId,
+          tagIds: input.tagIds,
+          actorId: input.updatedBy ?? 'system',
+        });
+      }
+
+      const persisted = await this.documentRepository.getById(
+        documentId,
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DocumentMapper.toResponse(document));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),

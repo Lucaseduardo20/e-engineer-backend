@@ -97,7 +97,8 @@ describe('GetProjectTechnicalProfileUseCase', () => {
     expect(result).toMatchObject({
       projectId: repository.project!.id,
       organizationId,
-      scoreExplanation: 'Tag direta no projeto: +3. Tag em entregavel: +2.',
+      scoreExplanation:
+        'Tag direta no projeto: +3. Tag em entregavel: +2. Tag em documento: +1. Documento oficial: +3.',
       tags: [
         {
           id: tagId,
@@ -132,6 +133,47 @@ describe('GetProjectTechnicalProfileUseCase', () => {
         id: tagId,
         score: 2,
         sources: [{ type: 'deliverable_tag', score: 2 }],
+      }),
+    ]);
+  });
+
+  it('scores document tags and official document tags in the technical profile', async () => {
+    const documentTagId = randomUUID();
+    const officialTagId = randomUUID();
+    repository.tagSources = [
+      {
+        tagId: documentTagId,
+        name: 'Memorial descritivo',
+        slug: 'memorial-descritivo',
+        category: 'document_type',
+        status: 'active',
+        source: 'document_tag',
+      },
+      {
+        tagId: officialTagId,
+        name: 'Projeto executivo',
+        slug: 'projeto-executivo',
+        category: 'project_stage',
+        status: 'active',
+        source: 'official_document',
+      },
+    ];
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId: repository.project!.id,
+    });
+
+    expect(result?.tags).toEqual([
+      expect.objectContaining({
+        id: officialTagId,
+        score: 3,
+        sources: [{ type: 'official_document', score: 3 }],
+      }),
+      expect.objectContaining({
+        id: documentTagId,
+        score: 1,
+        sources: [{ type: 'document_tag', score: 1 }],
       }),
     ]);
   });

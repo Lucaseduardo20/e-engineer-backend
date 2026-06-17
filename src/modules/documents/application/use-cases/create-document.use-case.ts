@@ -20,6 +20,8 @@ export interface CreateDocumentInput {
   description?: string | null;
   type: string;
   status?: string;
+  tagIds?: string[];
+  createdBy?: string;
 }
 
 @Injectable()
@@ -42,6 +44,13 @@ export class CreateDocumentUseCase {
 
       if (!projectExists) {
         throw new Error('Project not found.');
+      }
+
+      if (input.tagIds) {
+        await this.documentRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
       }
 
       const deliverableId = input.deliverableId
@@ -75,7 +84,21 @@ export class CreateDocumentUseCase {
 
       await this.documentRepository.save(document);
 
-      return Result.ok(DocumentMapper.toResponse(document));
+      if (input.tagIds) {
+        await this.documentRepository.syncTags({
+          organizationId,
+          documentId: new UniqueEntityId(document.id),
+          tagIds: input.tagIds,
+          actorId: input.createdBy ?? 'system',
+        });
+      }
+
+      const persisted = await this.documentRepository.getById(
+        new UniqueEntityId(document.id),
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DocumentMapper.toResponse(document));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),

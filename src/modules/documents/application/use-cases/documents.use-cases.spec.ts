@@ -17,9 +17,11 @@ function createRepository(): jest.Mocked<DocumentRepository> {
     deliverableExists: jest.fn(),
     findById: jest.fn(),
     getById: jest.fn(),
+    ensureSelectableTags: jest.fn(),
     list: jest.fn(),
     projectExists: jest.fn(),
     save: jest.fn(),
+    syncTags: jest.fn(),
   };
 }
 
@@ -51,6 +53,39 @@ describe('Documents use cases', () => {
       type: 'projeto_estrutural',
       status: 'draft',
     });
+  });
+
+  it('validates and syncs governed tags when creating a document', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    repository.getById.mockResolvedValue(null);
+    const useCase = new CreateDocumentUseCase(repository);
+    const organizationId = randomUUID();
+    const projectId = randomUUID();
+    const repeatedTagId = randomUUID();
+    const tagIds = [repeatedTagId, randomUUID(), repeatedTagId];
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId,
+      title: 'Projeto arquitetonico',
+      type: 'projeto_arquitetonico',
+      tagIds,
+      createdBy: 'user-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.ensureSelectableTags).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      tagIds,
+    });
+    expect(repository.syncTags).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: OrganizationId.create(organizationId),
+        tagIds,
+        actorId: 'user-1',
+      }),
+    );
   });
 
   it('rejects creation when the project is outside the organization', async () => {

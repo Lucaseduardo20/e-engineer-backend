@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { OrganizationId } from '../../../../shared/domain/value-objects/organization-id';
 import { UniqueEntityId } from '../../../../shared/domain/value-objects/unique-entity-id';
 import type {
@@ -10,12 +11,14 @@ import type {
 } from '../../../../shared/contracts/dashboard.contracts';
 import { DeliverableOrmEntity } from '../../../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { ProjectOrmEntity } from '../../../projects/infrastructure/persistence/typeorm/project.orm-entity';
+import { TechnicalTagOrmEntity } from '../../../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { Document, DocumentVersionProps } from '../../domain/entities/document';
 import {
   type DocumentRepository as DocumentRepositoryPort,
   type ListDocumentsParams,
 } from '../../domain/repositories/document.repository';
 import { DocumentMapper } from '../mappers/document.mapper';
+import { DocumentTagOrmEntity } from '../persistence/typeorm/document-tag.orm-entity';
 import { DocumentOrmEntity } from '../persistence/typeorm/document.orm-entity';
 import { DocumentVersionOrmEntity } from '../persistence/typeorm/document-version.orm-entity';
 
@@ -30,10 +33,71 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
     private readonly projects: Repository<ProjectOrmEntity>,
     @InjectRepository(DeliverableOrmEntity)
     private readonly deliverables: Repository<DeliverableOrmEntity>,
+    @InjectRepository(DocumentTagOrmEntity)
+    private readonly documentTags: Repository<DocumentTagOrmEntity>,
+    @InjectRepository(TechnicalTagOrmEntity)
+    private readonly technicalTags: Repository<TechnicalTagOrmEntity>,
   ) {}
 
   async save(document: Document): Promise<void> {
     await this.documents.save(DocumentMapper.toOrm(document));
+  }
+
+  async syncTags(params: {
+    documentId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+    source?: string;
+  }): Promise<void> {
+    await this.documentTags.delete({
+      documentId: params.documentId.toString(),
+      organizationId: params.organizationId.toString(),
+    });
+
+    const unique = [...new Set(params.tagIds)].filter(Boolean);
+    if (!unique.length) return;
+
+    await this.documentTags.save(
+      unique.map((tagId) => ({
+        id: randomUUID(),
+        organizationId: params.organizationId.toString(),
+        documentId: params.documentId.toString(),
+        tagId,
+        source: params.source ?? 'manual',
+        createdBy: params.actorId,
+      })),
+    );
+  }
+
+  async ensureSelectableTags(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+  }): Promise<void> {
+    const unique = [...new Set(params.tagIds)].filter(Boolean);
+    if (!unique.length) return;
+
+    const tags = await this.technicalTags.find({
+      where: {
+        id: In(unique),
+        organizationId: params.organizationId.toString(),
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    const foundIds = new Set(tags.map((tag) => tag.id));
+    const missing = unique.filter((tagId) => !foundIds.has(tagId));
+    if (missing.length) {
+      throw new Error('Technical tag not found for this organization.');
+    }
+
+    const archived = tags.find((tag) => tag.status === 'archived');
+    if (archived) {
+      throw new Error('Archived technical tags cannot be linked to a document.');
+    }
   }
 
   async list(
@@ -50,8 +114,7 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
       .skip((params.page - 1) * params.pageSize)
       .take(params.pageSize);
 
-      if (params.projectId) {
-      console.log(params.projectId?.toString());
+    if (params.projectId) {
       query.andWhere('document.projectId = :projectId', {
         projectId: params.projectId.toString(),
       });
@@ -76,6 +139,10 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
       organizationId,
       documents.map((document) => document.id),
     );
+    const tagsByDocument = await this.findTagsByDocumentIds(
+      organizationId,
+      documents.map((document) => document.id),
+    );
 
     return {
       items: documents.map((document) => {
@@ -88,6 +155,8 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
         return {
           ...response,
           updatedAt: document.updatedAt.toISOString(),
+          tagIds: (tagsByDocument.get(document.id) ?? []).map((tag) => tag.id),
+          tags: tagsByDocument.get(document.id) ?? [],
         };
       }),
       total,
@@ -101,7 +170,18 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
     organizationId: OrganizationId,
   ): Promise<DocumentDetail | null> {
     const document = await this.findById(documentId, organizationId);
-    return document ? DocumentMapper.toResponse(document) : null;
+    if (!document) return null;
+
+    const tagsByDocument = await this.findTagsByDocumentIds(organizationId, [
+      document.id,
+    ]);
+    const response = DocumentMapper.toResponse(document);
+
+    return {
+      ...response,
+      tagIds: (tagsByDocument.get(document.id) ?? []).map((tag) => tag.id),
+      tags: tagsByDocument.get(document.id) ?? [],
+    };
   }
 
   async findById(
@@ -218,5 +298,65 @@ export class TypeOrmDocumentRepository implements DocumentRepositoryPort {
     }
 
     return map;
+  }
+
+  private async findTagsByDocumentIds(
+    organizationId: OrganizationId,
+    documentIds: string[],
+  ): Promise<
+    Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+        category: string;
+        status: string;
+      }>
+    >
+  > {
+    if (!documentIds.length) return new Map();
+
+    const rows = await this.documentTags
+      .createQueryBuilder('documentTag')
+      .innerJoin(
+        TechnicalTagOrmEntity,
+        'tag',
+        'tag.id = documentTag.tag_id AND tag.organization_id = documentTag.organization_id',
+      )
+      .where('documentTag.organization_id = :organizationId', {
+        organizationId: organizationId.toString(),
+      })
+      .andWhere('documentTag.document_id IN (:...documentIds)', { documentIds })
+      .select([
+        'documentTag.document_id AS "documentId"',
+        'tag.id AS "id"',
+        'tag.name AS "name"',
+        'tag.slug AS "slug"',
+        'tag.category AS "category"',
+        'tag.status AS "status"',
+      ])
+      .orderBy('tag.name', 'ASC')
+      .getRawMany<{
+        documentId: string;
+        id: string;
+        name: string;
+        slug: string;
+        category: string;
+        status: string;
+      }>();
+
+    return rows.reduce((map, row) => {
+      const current = map.get(row.documentId) ?? [];
+      current.push({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        category: row.category,
+        status: row.status,
+      });
+      map.set(row.documentId, current);
+      return map;
+    }, new Map<string, Array<{ id: string; name: string; slug: string; category: string; status: string }>>());
   }
 }

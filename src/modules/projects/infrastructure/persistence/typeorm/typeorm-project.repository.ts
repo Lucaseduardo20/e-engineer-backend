@@ -17,6 +17,8 @@ import { ProjectTagOrmEntity } from './project-tag.orm-entity';
 import { TechnicalTagOrmEntity } from '../../../../technical-taxonomy/infrastructure/persistence/typeorm/technical-tag.orm-entity';
 import { DeliverableOrmEntity } from '../../../../deliverables/infrastructure/persistence/typeorm/deliverable.orm-entity';
 import { DeliverableTagOrmEntity } from '../../../../deliverables/infrastructure/persistence/typeorm/deliverable-tag.orm-entity';
+import { DocumentOrmEntity } from '../../../../documents/infrastructure/persistence/typeorm/document.orm-entity';
+import { DocumentTagOrmEntity } from '../../../../documents/infrastructure/persistence/typeorm/document-tag.orm-entity';
 import type {
   Paginated,
   Project as ProjectContract,
@@ -48,6 +50,8 @@ export class TypeOrmProjectRepository
     private readonly technicalTags: Repository<TechnicalTagOrmEntity>,
     @InjectRepository(DeliverableTagOrmEntity)
     private readonly deliverableTags: Repository<DeliverableTagOrmEntity>,
+    @InjectRepository(DocumentTagOrmEntity)
+    private readonly documentTags: Repository<DocumentTagOrmEntity>,
   ) {
     super(repository);
   }
@@ -242,8 +246,37 @@ export class TypeOrmProjectRepository
       ])
       .orderBy('tag.name', 'ASC')
       .getRawMany<ProjectTechnicalProfileTagSource>();
+    const documentTagSources = await this.documentTags
+      .createQueryBuilder('documentTag')
+      .innerJoin(
+        DocumentOrmEntity,
+        'document',
+        'document.id = documentTag.document_id AND document.organization_id = documentTag.organization_id',
+      )
+      .innerJoin(
+        'technical_tags',
+        'tag',
+        'tag.id = documentTag.tag_id AND tag.organization_id = documentTag.organization_id',
+      )
+      .where('documentTag.organization_id = :organizationId', {
+        organizationId: organizationId.toString(),
+      })
+      .andWhere('document.project_id = :projectId', {
+        projectId: projectId.toString(),
+      })
+      .andWhere('tag.status != :archived', { archived: 'archived' })
+      .select([
+        'tag.id AS "tagId"',
+        'tag.name AS "name"',
+        'tag.slug AS "slug"',
+        'tag.category AS "category"',
+        'tag.status AS "status"',
+        `CASE WHEN document.status = 'approved' THEN 'official_document' ELSE 'document_tag' END AS "source"`,
+      ])
+      .orderBy('tag.name', 'ASC')
+      .getRawMany<ProjectTechnicalProfileTagSource>();
 
-    return [...projectTagSources, ...deliverableTagSources];
+    return [...projectTagSources, ...deliverableTagSources, ...documentTagSources];
   }
 
   private toContract(

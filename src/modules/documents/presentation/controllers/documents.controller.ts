@@ -119,6 +119,7 @@ export class DocumentsController {
     const result = await this.createDocumentUseCase.execute({
       ...body,
       organizationId: request.user.organizationId,
+      createdBy: request.user.userId,
     });
 
     if (result.isFail()) {
@@ -139,6 +140,7 @@ export class DocumentsController {
       ...body,
       organizationId: request.user.organizationId,
       documentId: id,
+      updatedBy: request.user.userId,
     });
 
     if (result.isFail()) {

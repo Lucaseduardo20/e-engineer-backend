@@ -42,7 +42,7 @@ export interface Project {
 }
 
 export interface ProjectTechnicalProfileSource {
-  type: 'project_tag' | 'deliverable_tag';
+  type: 'project_tag' | 'deliverable_tag' | 'document_tag' | 'official_document';
   score: number;
 }
 
@@ -227,6 +227,14 @@ export interface DocumentSummary {
   officialRevision?: string | null;
   status: string;
   updatedAt: string;
+  tagIds?: string[];
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
   latestVersion?: DocumentVersion | null;
   officialVersion?: DocumentVersion | null;
 }

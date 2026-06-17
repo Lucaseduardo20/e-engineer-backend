@@ -27,6 +27,14 @@ export class DocumentSummaryResponseDto implements DocumentSummary {
   officialRevision?: string | null;
   status!: string;
   updatedAt!: string;
+  tagIds?: string[];
+  tags?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    category: string;
+    status: string;
+  }>;
   latestVersion?: DocumentVersionResponseDto | null;
   officialVersion?: DocumentVersionResponseDto | null;
 }

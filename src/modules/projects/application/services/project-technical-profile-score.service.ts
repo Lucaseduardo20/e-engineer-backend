@@ -4,10 +4,13 @@ import type { ProjectTechnicalProfileTagDto } from '../dto/project-technical-pro
 
 const DIRECT_PROJECT_TAG_SCORE = 3;
 const DELIVERABLE_TAG_SCORE = 2;
+const DOCUMENT_TAG_SCORE = 1;
+const OFFICIAL_DOCUMENT_SCORE = 3;
 
 @Injectable()
 export class ProjectTechnicalProfileScoreService {
-  readonly explanation = 'Tag direta no projeto: +3. Tag em entregavel: +2.';
+  readonly explanation =
+    'Tag direta no projeto: +3. Tag em entregavel: +2. Tag em documento: +1. Documento oficial: +3.';
 
   calculate(
     tagSources: ProjectTechnicalProfileTagSource[],
@@ -25,16 +28,10 @@ export class ProjectTechnicalProfileScoreService {
         sources: [],
       };
 
-      const score =
-        tagSource.source === 'deliverable_tag'
-          ? DELIVERABLE_TAG_SCORE
-          : DIRECT_PROJECT_TAG_SCORE;
+      const score = this.scoreForSource(tagSource.source);
       current.score += score;
       current.sources.push({
-        type:
-          tagSource.source === 'deliverable_tag'
-            ? 'deliverable_tag'
-            : 'project_tag',
+        type: this.typeForSource(tagSource.source),
         score,
       });
       byTagId.set(tagSource.tagId, current);
@@ -44,5 +41,21 @@ export class ProjectTechnicalProfileScoreService {
       (first, second) =>
         second.score - first.score || first.name.localeCompare(second.name),
     );
+  }
+
+  private scoreForSource(source: string): number {
+    if (source === 'deliverable_tag') return DELIVERABLE_TAG_SCORE;
+    if (source === 'document_tag') return DOCUMENT_TAG_SCORE;
+    if (source === 'official_document') return OFFICIAL_DOCUMENT_SCORE;
+    return DIRECT_PROJECT_TAG_SCORE;
+  }
+
+  private typeForSource(
+    source: string,
+  ): ProjectTechnicalProfileTagDto['sources'][number]['type'] {
+    if (source === 'deliverable_tag') return 'deliverable_tag';
+    if (source === 'document_tag') return 'document_tag';
+    if (source === 'official_document') return 'official_document';
+    return 'project_tag';
   }
 }

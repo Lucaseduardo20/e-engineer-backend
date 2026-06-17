@@ -7,6 +7,7 @@ import { GetDocumentUseCase } from '../../application/use-cases/get-document.use
 import { ListDocumentsUseCase } from '../../application/use-cases/list-documents.use-case';
 import { UpdateDocumentUseCase } from '../../application/use-cases/update-document.use-case';
 import { UploadDocumentVersionUseCase } from '../../application/use-cases/upload-document-version.use-case';
+import { SaveDocumentAsKnowledgeModelUseCase } from '../../application/use-cases/save-document-as-knowledge-model.use-case';
 import { DocumentsController } from './documents.controller';
 
 function createRequest(): AuthenticatedRequest {
@@ -25,6 +26,7 @@ describe('DocumentsController', () => {
   let updateDocumentUseCase: jest.Mocked<UpdateDocumentUseCase>;
   let deleteDocumentUseCase: jest.Mocked<DeleteDocumentUseCase>;
   let uploadDocumentVersionUseCase: jest.Mocked<UploadDocumentVersionUseCase>;
+  let saveDocumentAsKnowledgeModelUseCase: jest.Mocked<SaveDocumentAsKnowledgeModelUseCase>;
   let controller: DocumentsController;
 
   beforeEach(() => {
@@ -34,6 +36,7 @@ describe('DocumentsController', () => {
     updateDocumentUseCase = { execute: jest.fn() } as never;
     deleteDocumentUseCase = { execute: jest.fn() } as never;
     uploadDocumentVersionUseCase = { execute: jest.fn() } as never;
+    saveDocumentAsKnowledgeModelUseCase = { execute: jest.fn() } as never;
     controller = new DocumentsController(
       createDocumentUseCase,
       listDocumentsUseCase,
@@ -41,6 +44,7 @@ describe('DocumentsController', () => {
       updateDocumentUseCase,
       deleteDocumentUseCase,
       uploadDocumentVersionUseCase,
+      saveDocumentAsKnowledgeModelUseCase,
     );
   });
 
@@ -104,6 +108,7 @@ describe('DocumentsController', () => {
       projectId: 'project-1',
       title: 'Memorial',
       type: 'memorial_descritivo',
+      createdBy: 'user-1',
     });
   });
 

@@ -1,4 +1,12 @@
-import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import {
   documentStatusValues,
   type DocumentStatusValue,
@@ -30,4 +38,10 @@ export class UpdateDocumentDto {
   @IsOptional()
   @IsIn(documentStatusValues)
   status?: DocumentStatusValue;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(24)
+  @IsUUID(undefined, { each: true })
+  tagIds?: string[];
 }
