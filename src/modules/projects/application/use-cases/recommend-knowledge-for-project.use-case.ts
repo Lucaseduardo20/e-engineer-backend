@@ -15,6 +15,7 @@ import {
   PROJECT_REPOSITORY,
   type ProjectRepository,
 } from '../../domain/repositories/project.repository';
+import { ProjectTechnicalProfileScoreService } from '../services/project-technical-profile-score.service';
 
 type GovernedTag = {
   id: string;
@@ -33,6 +34,7 @@ export class RecommendKnowledgeForProjectUseCase {
     private readonly deliverables: DeliverableRepository,
     @Inject(KNOWLEDGE_ITEM_REPOSITORY)
     private readonly knowledgeItems: KnowledgeItemRepository,
+    private readonly profileScoreService: ProjectTechnicalProfileScoreService,
   ) {}
 
   async execute(input: {
@@ -55,42 +57,59 @@ export class RecommendKnowledgeForProjectUseCase {
     const projectDeliverableIds = new Set(
       deliverablePage.items.map((deliverable) => deliverable.id),
     );
-    const governedTags = new Map<string, GovernedTag>();
-
-    for (const deliverable of deliverablePage.items) {
-      for (const tag of deliverable.tags ?? []) {
-        if (tag.status === 'active') {
-          governedTags.set(tag.id, tag);
-        }
-      }
-    }
-
-    const governedTagIds = [...governedTags.keys()];
+    const profileSources = await this.projects.listTechnicalProfileTagSources(
+      projectId,
+      organizationId,
+    );
+    const profileTags = this.profileScoreService
+      .calculate(profileSources)
+      .filter((tag) => tag.status !== 'archived');
+    const profileTagsById = new Map(profileTags.map((tag) => [tag.id, tag]));
+    const governedTagIds = profileTags.map((tag) => tag.id);
 
     if (!governedTagIds.length) {
       return { items: [] };
     }
 
-    const candidatePage = await this.knowledgeItems.list(organizationId, {
-      page: 1,
-      pageSize: 100,
-      status: 'published',
-      tagIds: governedTagIds,
-      includeArchived: false,
-    });
+    const [publishedPage, deprecatedPage] = await Promise.all([
+      this.knowledgeItems.list(organizationId, {
+        page: 1,
+        pageSize: 100,
+        status: 'published',
+        tagIds: governedTagIds,
+        includeArchived: false,
+      }),
+      this.knowledgeItems.list(organizationId, {
+        page: 1,
+        pageSize: 40,
+        status: 'deprecated',
+        tagIds: governedTagIds,
+        includeArchived: false,
+      }),
+    ]);
+    const candidateIds = [
+      ...new Set([
+        ...publishedPage.items.map((item) => item.id),
+        ...deprecatedPage.items.map((item) => item.id),
+      ]),
+    ];
     const recommendations: ProjectKnowledgeRecommendation[] = [];
 
-    for (const candidate of candidatePage.items) {
+    for (const candidateId of candidateIds) {
       const detail = await this.knowledgeItems.findByIdWithRelations(
-        new UniqueEntityId(candidate.id),
+        new UniqueEntityId(candidateId),
         organizationId,
       );
 
-      if (!detail || detail.status !== 'published') {
+      if (!detail || detail.status === 'archived') {
         continue;
       }
 
-      if (detail.archivedAt || detail.deprecatedAt) {
+      if (!['published', 'deprecated'].includes(detail.status)) {
+        continue;
+      }
+
+      if (detail.archivedAt) {
         continue;
       }
 
@@ -102,12 +121,8 @@ export class RecommendKnowledgeForProjectUseCase {
             projectDeliverableIds.has(relation.targetId)),
       );
 
-      if (alreadyApplied) {
-        continue;
-      }
-
       const matchedTags = detail.tags.filter((tag) =>
-        governedTags.has(tag.id),
+        profileTagsById.has(tag.id),
       );
 
       if (!matchedTags.length) {
@@ -115,10 +130,26 @@ export class RecommendKnowledgeForProjectUseCase {
       }
 
       const score =
-        matchedTags.length * 10 +
-        this.projectStatusWeight(project.status, detail.type);
+        matchedTags.reduce(
+          (total, tag) => total + (profileTagsById.get(tag.id)?.score ?? 0),
+          0,
+        ) +
+        this.projectStatusWeight(project.status, detail.type) +
+        this.knowledgeTypeWeight(detail.type) +
+        (alreadyApplied ? -5 : 0) +
+        (detail.status === 'deprecated' || detail.deprecatedAt ? -8 : 0);
+      const tagNames = matchedTags
+        .sort(
+          (first, second) =>
+            (profileTagsById.get(second.id)?.score ?? 0) -
+              (profileTagsById.get(first.id)?.score ?? 0) ||
+            first.name.localeCompare(second.name),
+        )
+        .slice(0, 3)
+        .map((tag) => tag.name);
 
       recommendations.push({
+        type: this.recommendationType(detail.type),
         knowledgeItem: {
           id: detail.id,
           title: detail.title,
@@ -131,9 +162,13 @@ export class RecommendKnowledgeForProjectUseCase {
         },
         matchedTags,
         score,
-        reason: `Combina com ${matchedTags.length} tag(s) tecnica(s) dos entregaveis: ${matchedTags
-          .map((tag) => tag.name)
-          .join(', ')}.`,
+        reason: this.reasonFor({
+          matchedTagNames: tagNames,
+          alreadyApplied,
+          deprecated: detail.status === 'deprecated' || Boolean(detail.deprecatedAt),
+          type: detail.type,
+        }),
+        alreadyApplied,
       });
     }
 
@@ -146,7 +181,8 @@ export class RecommendKnowledgeForProjectUseCase {
 
           return (
             new Date(second.knowledgeItem.updatedAt).getTime() -
-            new Date(first.knowledgeItem.updatedAt).getTime()
+              new Date(first.knowledgeItem.updatedAt).getTime() ||
+            first.knowledgeItem.title.localeCompare(second.knowledgeItem.title)
           );
         })
         .slice(0, 8),
@@ -183,5 +219,44 @@ export class RecommendKnowledgeForProjectUseCase {
     }
 
     return 0;
+  }
+
+  private knowledgeTypeWeight(type: KnowledgeItemTypeValue): number {
+    if (type === 'review_checklist') return 4;
+    if (type === 'document_model') return 4;
+    if (type === 'project_reference' || type === 'project_template') return 3;
+    if (type === 'delivery_standard' || type === 'technical_standard') return 2;
+    return 0;
+  }
+
+  private recommendationType(
+    type: KnowledgeItemTypeValue,
+  ): ProjectKnowledgeRecommendation['type'] {
+    if (type === 'document_model') return 'document_model';
+    if (type === 'review_checklist') return 'review_checklist';
+    if (type === 'project_reference' || type === 'project_template') {
+      return 'project_reference';
+    }
+    return 'knowledge_item';
+  }
+
+  private reasonFor(params: {
+    matchedTagNames: string[];
+    alreadyApplied: boolean;
+    deprecated: boolean;
+    type: KnowledgeItemTypeValue;
+  }): string {
+    const base = params.matchedTagNames.length
+      ? `Sugestao baseada no contexto tecnico: ${params.matchedTagNames.join(', ')}.`
+      : 'Sugestao baseada no contexto tecnico deste projeto.';
+    const typeHint =
+      params.type === 'review_checklist'
+        ? ' Pode apoiar a revisao tecnica.'
+        : params.type === 'document_model'
+          ? ' Pode acelerar documentos semelhantes.'
+          : '';
+    const appliedHint = params.alreadyApplied ? ' Ja esta aplicado ao projeto.' : '';
+    const deprecatedHint = params.deprecated ? ' Item depreciado: revise antes de usar.' : '';
+    return `${base}${typeHint}${appliedHint}${deprecatedHint}`;
   }
 }
