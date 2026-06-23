@@ -11,6 +11,7 @@ COPY . .
 RUN npm run build
 
 FROM base AS runner
+COPY package*.json ./
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 ENV NODE_ENV=production
