@@ -11,27 +11,49 @@ describe('JwtTokenService', () => {
       verify: jest.fn().mockReturnValue({
         sub: 'user-1',
         organizationId: 'org-1',
+        roles: ['owner'],
+        isPlatformAdmin: true,
       }),
     } as unknown as jest.Mocked<JwtService>;
     tokenService = new JwtTokenService(jwtService);
   });
 
   it('signs user and organization context', () => {
-    expect(tokenService.generateToken('user-1', 'org-1')).toBe('signed-token');
-    expect(jwtService.sign).toHaveBeenCalledWith({
+    expect(
+      tokenService.generateToken({
+        userId: 'user-1',
+        organizationId: 'org-1',
+        roles: ['owner'],
+        isPlatformAdmin: true,
+      }),
+    ).toBe('signed-token');
+    expect(jwtService.sign.mock.calls[0][0]).toEqual({
       sub: 'user-1',
       organizationId: 'org-1',
+      roles: ['owner'],
+      isPlatformAdmin: true,
+      actorUserId: null,
+      actorOrganizationId: null,
+      impersonatedUserId: null,
     });
   });
 
   it('refreshes tokens while ignoring expiration', () => {
     expect(tokenService.refreshToken('expired-token')).toBe('signed-token');
-    expect(jwtService.verify).toHaveBeenCalledWith('expired-token', {
-      ignoreExpiration: true,
-    });
-    expect(jwtService.sign).toHaveBeenCalledWith({
+    expect(jwtService.verify.mock.calls[0]).toEqual([
+      'expired-token',
+      {
+        ignoreExpiration: true,
+      },
+    ]);
+    expect(jwtService.sign.mock.calls[0][0]).toEqual({
       sub: 'user-1',
       organizationId: 'org-1',
+      roles: ['owner'],
+      isPlatformAdmin: true,
+      actorUserId: null,
+      actorOrganizationId: null,
+      impersonatedUserId: null,
     });
   });
 
@@ -39,7 +61,9 @@ describe('JwtTokenService', () => {
     expect(tokenService.validateToken('signed-token')).toEqual({
       sub: 'user-1',
       organizationId: 'org-1',
+      roles: ['owner'],
+      isPlatformAdmin: true,
     });
-    expect(jwtService.verify).toHaveBeenCalledWith('signed-token');
+    expect(jwtService.verify.mock.calls[0]).toEqual(['signed-token']);
   });
 });

@@ -43,7 +43,16 @@ export class DeliverableMapper {
     return ormEntity;
   }
 
-  static toResponse(deliverable: Deliverable): DeliverableResponseDto {
+  static toResponse(
+    deliverable: Deliverable,
+    tags: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+      status: string;
+    }> = [],
+  ): DeliverableResponseDto {
     return {
       id: deliverable.id,
       projectId: deliverable.projectId.toString(),
@@ -53,12 +62,23 @@ export class DeliverableMapper {
       status: deliverable.status.value,
       type: deliverable.type.value,
       assignees: deliverable.assignees,
+      tagIds: tags.map((tag) => tag.id),
+      tags,
       attachments: [],
     };
   }
 
-  static ormToResponse(ormEntity: DeliverableOrmEntity): DeliverableResponseDto {
-    return DeliverableMapper.toResponse(DeliverableMapper.toDomain(ormEntity));
+  static ormToResponse(
+    ormEntity: DeliverableOrmEntity,
+    tags: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+      status: string;
+    }> = [],
+  ): DeliverableResponseDto {
+    return DeliverableMapper.toResponse(DeliverableMapper.toDomain(ormEntity), tags);
   }
 
   private static assigneesFromOrm(ormEntity: DeliverableOrmEntity): string[] {

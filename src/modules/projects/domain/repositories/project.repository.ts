@@ -15,8 +15,27 @@ export interface ListProjectsParams {
   status?: ProjectContract['status'];
 }
 
+export interface ProjectTechnicalProfileTagSource {
+  tagId: string;
+  name: string;
+  slug: string;
+  category: string;
+  status: string;
+  source: string;
+}
+
 export interface ProjectRepository {
   save(project: Project): Promise<void>;
+  syncTags(params: {
+    projectId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+  }): Promise<void>;
+  ensureSelectableTags(params: {
+    organizationId: OrganizationId;
+    tagIds: string[];
+  }): Promise<void>;
   list(
     organizationId: OrganizationId,
     params: ListProjectsParams,
@@ -29,4 +48,8 @@ export interface ProjectRepository {
     projectId: UniqueEntityId,
     organizationId: OrganizationId,
   ): Promise<Project | null>;
+  listTechnicalProfileTagSources(
+    projectId: UniqueEntityId,
+    organizationId: OrganizationId,
+  ): Promise<ProjectTechnicalProfileTagSource[]>;
 }

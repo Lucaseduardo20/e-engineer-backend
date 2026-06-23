@@ -6,6 +6,8 @@ export interface LoginOutputDto {
     email: string;
     avatarUrl?: string | null;
     roles: string[];
+    isPlatformAdmin?: boolean;
+    impersonatedBy?: string | null;
     organizationId: string;
   };
 }

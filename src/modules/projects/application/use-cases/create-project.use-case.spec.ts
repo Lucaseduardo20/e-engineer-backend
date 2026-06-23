@@ -8,13 +8,29 @@ import type {
 } from '../../../../shared/contracts/dashboard.contracts';
 import { Project } from '../../domain/entities/project';
 import { ProjectRepository } from '../../domain/repositories/project.repository';
+import type { ProjectBaseStructureRepository } from '../ports/project-base-structure.repository';
 import { CreateProjectUseCase } from './create-project.use-case';
 
 class InMemoryProjectRepository implements ProjectRepository {
   readonly projects: Project[] = [];
+  readonly syncedTags: string[][] = [];
 
   save(project: Project): Promise<void> {
     this.projects.push(project);
+    return Promise.resolve();
+  }
+
+  syncTags(params: {
+    projectId: UniqueEntityId;
+    organizationId: OrganizationId;
+    tagIds: string[];
+    actorId: string;
+  }): Promise<void> {
+    this.syncedTags.push(params.tagIds);
+    return Promise.resolve();
+  }
+
+  ensureSelectableTags(): Promise<void> {
     return Promise.resolve();
   }
 
@@ -37,11 +53,16 @@ class InMemoryProjectRepository implements ProjectRepository {
   ): Promise<ProjectContract | null> {
     return Promise.resolve(null);
   }
+
+  listTechnicalProfileTagSources(): Promise<[]> {
+    return Promise.resolve([]);
+  }
 }
 
 describe('CreateProjectUseCase', () => {
   let projectRepository: InMemoryProjectRepository;
   let domainEventPublisher: jest.Mocked<DomainEventPublisher>;
+  let projectBaseStructure: jest.Mocked<ProjectBaseStructureRepository>;
   let useCase: CreateProjectUseCase;
 
   beforeEach(() => {
@@ -51,7 +72,28 @@ describe('CreateProjectUseCase', () => {
       publishAll: jest.fn(),
       register: jest.fn(),
     };
-    useCase = new CreateProjectUseCase(projectRepository, domainEventPublisher);
+    projectBaseStructure = {
+      recommendByTags: jest.fn(),
+      recommendSimilarProjects: jest.fn(),
+      baseProjectExists: jest.fn().mockResolvedValue(true),
+      listBaseProjectTagIds: jest.fn().mockResolvedValue([]),
+      ensureDeliverablesBelongToBase: jest.fn().mockResolvedValue(undefined),
+      saveBaseRelation: jest.fn().mockResolvedValue(undefined),
+      copyDeliverablesOnly: jest.fn().mockResolvedValue({
+        deliverablesCopied: 0,
+      }),
+      cloneStructure: jest.fn().mockResolvedValue({
+        deliverablesCopied: 0,
+        documentsCopied: 0,
+        documentVersionsCopied: 0,
+        reviewsCopied: 0,
+      }),
+    };
+    useCase = new CreateProjectUseCase(
+      projectRepository,
+      domainEventPublisher,
+      projectBaseStructure,
+    );
   });
 
   it('creates a technical engineering project scoped by organization', async () => {
@@ -81,6 +123,75 @@ describe('CreateProjectUseCase', () => {
       projectType: 'reforma escolar',
       status: 'draft',
     });
+    expect(projectBaseStructure.cloneStructure).not.toHaveBeenCalled();
+  });
+
+  it('creates a project from a base without copying documents or reviews', async () => {
+    const organizationId = randomUUID();
+    const baseProjectId = randomUUID();
+    projectBaseStructure.copyDeliverablesOnly.mockResolvedValueOnce({
+      deliverablesCopied: 3,
+    });
+
+    const result = await useCase.execute({
+      organizationId,
+      name: 'UBS Nova',
+      projectType: 'unidade de saude',
+      baseProjectId,
+      createdBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(projectBaseStructure.copyDeliverablesOnly).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: expect.objectContaining({ value: organizationId }),
+        baseProjectId: expect.objectContaining({ value: baseProjectId }),
+        targetProjectId: expect.any(UniqueEntityId),
+        actorId: 'coord-1',
+      }),
+    );
+    expect(projectBaseStructure.cloneStructure).not.toHaveBeenCalled();
+    expect(projectBaseStructure.saveBaseRelation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inheritTags: false,
+        inheritDeliverables: true,
+        actorId: 'coord-1',
+      }),
+    );
+    expect(result.unwrap()).toMatchObject({
+      clonedFromProjectId: baseProjectId,
+      clonedStructure: {
+        deliverablesCopied: 3,
+        documentsCopied: 0,
+        documentVersionsCopied: 0,
+        reviewsCopied: 0,
+      },
+    });
+  });
+
+  it('validates and syncs unique technical tags when creating a project', async () => {
+    const organizationId = randomUUID();
+    const tagId = randomUUID();
+    const ensureSelectableTags = jest.spyOn(
+      projectRepository,
+      'ensureSelectableTags',
+    );
+
+    const result = await useCase.execute({
+      organizationId,
+      name: 'UBS Nova',
+      projectType: 'unidade de saude',
+      tagIds: [tagId, tagId],
+      createdBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(ensureSelectableTags).toHaveBeenCalledWith({
+      organizationId: expect.objectContaining({ value: organizationId }),
+      tagIds: [tagId],
+    });
+    expect(projectRepository.syncedTags).toEqual([[tagId]]);
+    expect(result.unwrap().tagIds).toEqual([tagId]);
   });
 
   it('rejects projects without a technical project name', async () => {

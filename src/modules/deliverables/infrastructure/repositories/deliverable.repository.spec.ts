@@ -19,9 +19,17 @@ describe('TypeOrmDeliverableRepository', () => {
     const projects = {
       exists: jest.fn().mockResolvedValue(true),
     };
+    const deliverableTags = {};
+    const technicalTags = {};
+    const deliverableBaseRelations = {};
+    const deliverableRemovalRequests = {};
     const repository = new TypeOrmDeliverableRepository(
       ormRepository as never,
       projects as never,
+      deliverableTags as never,
+      technicalTags as never,
+      deliverableBaseRelations as never,
+      deliverableRemovalRequests as never,
     );
 
     return { queryBuilder, projects, repository };

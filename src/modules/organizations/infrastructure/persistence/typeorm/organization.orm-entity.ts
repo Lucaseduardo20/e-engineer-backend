@@ -17,6 +17,9 @@ export class OrganizationOrmEntity {
   @Column({ name: 'legal_name', type: 'varchar', length: 180, nullable: true })
   legalName!: string | null;
 
+  @Column({ name: 'logo_url', type: 'text', nullable: true })
+  logoUrl!: string | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 

@@ -11,6 +11,7 @@ export interface ProjectProps {
   name: string;
   projectType: string;
   status: ProjectStatus;
+  client?: string | null;
 }
 
 export class Project extends AggregateRoot<ProjectProps> {
@@ -22,6 +23,7 @@ export class Project extends AggregateRoot<ProjectProps> {
     organizationId: OrganizationId;
     name: string;
     projectType: string;
+    client?: string | null;
   }): Project {
     const name = params.name.trim();
     const projectType = params.projectType.trim();
@@ -39,6 +41,7 @@ export class Project extends AggregateRoot<ProjectProps> {
       name,
       projectType,
       status: ProjectStatus.draft(),
+      client: this.normalizeNullableText(params.client),
     });
 
     project.addDomainEvent(
@@ -71,7 +74,47 @@ export class Project extends AggregateRoot<ProjectProps> {
     return this.props.projectType;
   }
 
+  get client(): string | null {
+    return this.props.client ?? null;
+  }
+
   get status(): ProjectStatus {
     return this.props.status;
+  }
+
+  updateStatus(status: ProjectStatus): void {
+    this.props.status = status;
+  }
+
+  updateDetails(params: {
+    name?: string;
+    projectType?: string;
+    client?: string | null;
+  }): void {
+    if (params.name !== undefined) {
+      const name = params.name.trim();
+      if (!name) {
+        throw new InvalidProjectNameError();
+      }
+      this.props.name = name;
+    }
+
+    if (params.projectType !== undefined) {
+      const projectType = params.projectType.trim();
+      if (!projectType) {
+        throw new InvalidProjectTypeError();
+      }
+      this.props.projectType = projectType;
+    }
+
+    if (params.client !== undefined) {
+      this.props.client = Project.normalizeNullableText(params.client);
+    }
+  }
+
+  private static normalizeNullableText(value?: string | null): string | null {
+    if (value == null) return null;
+    const text = value.trim();
+    return text ? text : null;
   }
 }

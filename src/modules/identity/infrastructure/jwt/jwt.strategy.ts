@@ -18,6 +18,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       userId: payload.sub,
       organizationId: payload.organizationId,
+      roles: payload.roles ?? [],
+      isPlatformAdmin: payload.isPlatformAdmin ?? false,
+      actorUserId: payload.actorUserId ?? null,
+      actorOrganizationId: payload.actorOrganizationId ?? null,
+      impersonatedUserId: payload.impersonatedUserId ?? null,
     };
   }
 }
@@ -25,4 +30,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 export interface AuthenticatedUser {
   userId: string;
   organizationId: string;
+  roles: string[];
+  isPlatformAdmin: boolean;
+  actorUserId?: string | null;
+  actorOrganizationId?: string | null;
+  impersonatedUserId?: string | null;
 }

@@ -21,6 +21,8 @@ export interface CreateDeliverableInput {
   status?: string;
   type: string;
   assignees?: string[];
+  tagIds?: string[];
+  createdBy?: string;
 }
 
 @Injectable()
@@ -45,6 +47,13 @@ export class CreateDeliverableUseCase {
         throw new Error('Project not found.');
       }
 
+      if (input.tagIds) {
+        await this.deliverableRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
+      }
+
       const deliverable = Deliverable.create({
         organizationId,
         projectId,
@@ -59,8 +68,21 @@ export class CreateDeliverableUseCase {
       });
 
       await this.deliverableRepository.save(deliverable);
+      if (input.tagIds) {
+        await this.deliverableRepository.syncTags({
+          deliverableId: new UniqueEntityId(deliverable.id),
+          organizationId,
+          tagIds: input.tagIds,
+          actorId: input.createdBy ?? 'system',
+        });
+      }
 
-      return Result.ok(DeliverableMapper.toResponse(deliverable));
+      const persisted = await this.deliverableRepository.getById(
+        new UniqueEntityId(deliverable.id),
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DeliverableMapper.toResponse(deliverable));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),

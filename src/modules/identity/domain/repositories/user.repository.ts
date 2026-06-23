@@ -7,7 +7,12 @@ export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 export interface UserRepository {
   save(user: User): Promise<void>;
   findByEmail(email: string): Promise<User | null>;
+  findByIdGlobal(id: string): Promise<User | null>;
   findById(id: string, scope: TenantScope): Promise<User | null>;
+  getMembershipRoles(
+    userId: string,
+    organizationId: OrganizationId,
+  ): Promise<string[]>;
   findByOrganizationId(
     organizationId: OrganizationId,
     scope: TenantScope,

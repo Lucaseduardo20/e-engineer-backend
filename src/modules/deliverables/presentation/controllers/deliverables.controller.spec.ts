@@ -2,8 +2,12 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Result } from '../../../../shared/application/result/result';
 import type { AuthenticatedRequest } from '../../../../shared/infrastructure/auth/authenticated-request';
 import { CreateDeliverableUseCase } from '../../application/use-cases/create-deliverable.use-case';
+import { DecideDeliverableRemovalUseCase } from '../../application/use-cases/decide-deliverable-removal.use-case';
+import { DeleteDeliverableUseCase } from '../../application/use-cases/delete-deliverable.use-case';
 import { GetDeliverableUseCase } from '../../application/use-cases/get-deliverable.use-case';
 import { ListDeliverablesUseCase } from '../../application/use-cases/list-deliverables.use-case';
+import { MarkDeliverableInheritanceReviewedUseCase } from '../../application/use-cases/mark-deliverable-inheritance-reviewed.use-case';
+import { RequestDeliverableRemovalUseCase } from '../../application/use-cases/request-deliverable-removal.use-case';
 import { UpdateDeliverableUseCase } from '../../application/use-cases/update-deliverable.use-case';
 import { DeliverablesController } from './deliverables.controller';
 
@@ -12,6 +16,7 @@ function createRequest(): AuthenticatedRequest {
     user: {
       userId: 'user-1',
       organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      roles: ['member'],
     },
   } as AuthenticatedRequest;
 }
@@ -21,6 +26,9 @@ describe('DeliverablesController', () => {
   let listDeliverablesUseCase: jest.Mocked<ListDeliverablesUseCase>;
   let getDeliverableUseCase: jest.Mocked<GetDeliverableUseCase>;
   let updateDeliverableUseCase: jest.Mocked<UpdateDeliverableUseCase>;
+  let markDeliverableInheritanceReviewedUseCase: jest.Mocked<MarkDeliverableInheritanceReviewedUseCase>;
+  let requestDeliverableRemovalUseCase: jest.Mocked<RequestDeliverableRemovalUseCase>;
+  let decideDeliverableRemovalUseCase: jest.Mocked<DecideDeliverableRemovalUseCase>;
   let controller: DeliverablesController;
 
   beforeEach(() => {
@@ -28,11 +36,17 @@ describe('DeliverablesController', () => {
     listDeliverablesUseCase = { execute: jest.fn() } as never;
     getDeliverableUseCase = { execute: jest.fn() } as never;
     updateDeliverableUseCase = { execute: jest.fn() } as never;
+    markDeliverableInheritanceReviewedUseCase = { execute: jest.fn() } as never;
+    requestDeliverableRemovalUseCase = { execute: jest.fn() } as never;
+    decideDeliverableRemovalUseCase = { execute: jest.fn() } as never;
     controller = new DeliverablesController(
       createDeliverableUseCase,
       listDeliverablesUseCase,
       getDeliverableUseCase,
       updateDeliverableUseCase,
+      markDeliverableInheritanceReviewedUseCase,
+      requestDeliverableRemovalUseCase,
+      decideDeliverableRemovalUseCase,
     );
   });
 
@@ -124,6 +138,7 @@ describe('DeliverablesController', () => {
       title: 'Projeto estrutural',
       type: 'structural_project',
       assignees: ['Lucas'],
+      createdBy: 'user-1',
     });
   });
 
@@ -152,5 +167,67 @@ describe('DeliverablesController', () => {
     await expect(
       controller.update('deliverable-1', { status: 'done' }, createRequest()),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('marks inherited deliverables as reviewed using the authenticated actor', async () => {
+    markDeliverableInheritanceReviewedUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'deliverable-1',
+        projectId: 'project-1',
+        title: 'Orcamento',
+        type: 'budget',
+        status: 'todo',
+        assignees: [],
+        inheritanceReview: {
+          relationId: 'relation-1',
+          baseProjectId: 'base-project-1',
+          baseDeliverableId: 'base-deliverable-1',
+          needsReviewAfterInheritance: false,
+          reviewedBy: 'user-1',
+          reviewedAt: '2026-06-16T12:00:00.000Z',
+        },
+      }),
+    );
+
+    await controller.markInheritanceReviewed('deliverable-1', createRequest());
+
+    expect(markDeliverableInheritanceReviewedUseCase.execute).toHaveBeenCalledWith({
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      deliverableId: 'deliverable-1',
+      reviewedBy: 'user-1',
+    });
+  });
+
+  it('requests deliverable removal using tenant scope and actor roles', async () => {
+    requestDeliverableRemovalUseCase.execute.mockResolvedValue(
+      Result.ok({
+        id: 'request-1',
+        organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+        projectId: 'project-1',
+        deliverableId: 'deliverable-1',
+        deliverableTitle: 'Orcamento',
+        requestedBy: 'user-1',
+        reason: 'Nao se aplica ao escopo tecnico atual.',
+        status: 'requested',
+        reviewedBy: null,
+        reviewedAt: null,
+        reviewComment: null,
+        createdAt: '2026-06-16T12:00:00.000Z',
+      }),
+    );
+
+    await controller.requestRemoval(
+      'deliverable-1',
+      { reason: 'Nao se aplica ao escopo tecnico atual.' },
+      createRequest(),
+    );
+    expect(requestDeliverableRemovalUseCase.execute).toHaveBeenCalledWith({
+      organizationId: '7b8e7f0a-1c0e-4f80-9e6a-0f0c16f6b001',
+      deliverableId: 'deliverable-1',
+      requestedBy: 'user-1',
+      actorRoles: ['member'],
+      actorIsPlatformAdmin: undefined,
+      reason: 'Nao se aplica ao escopo tecnico atual.',
+    });
   });
 });

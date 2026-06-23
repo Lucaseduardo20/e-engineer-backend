@@ -20,6 +20,8 @@ export interface UpdateDeliverableInput {
   status?: string;
   type?: string;
   assignees?: string[];
+  tagIds?: string[];
+  updatedBy?: string;
 }
 
 @Injectable()
@@ -42,6 +44,14 @@ export class UpdateDeliverableUseCase {
         throw new Error('Deliverable not found.');
       }
 
+      const organizationId = OrganizationId.create(input.organizationId);
+      if (input.tagIds) {
+        await this.deliverableRepository.ensureSelectableTags({
+          organizationId,
+          tagIds: input.tagIds,
+        });
+      }
+
       deliverable.update({
         title: input.title,
         description: input.description,
@@ -54,8 +64,21 @@ export class UpdateDeliverableUseCase {
       });
 
       await this.deliverableRepository.save(deliverable);
+      if (input.tagIds) {
+        await this.deliverableRepository.syncTags({
+          deliverableId: new UniqueEntityId(deliverable.id),
+          organizationId,
+          tagIds: input.tagIds,
+          actorId: input.updatedBy ?? 'system',
+        });
+      }
 
-      return Result.ok(DeliverableMapper.toResponse(deliverable));
+      const persisted = await this.deliverableRepository.getById(
+        new UniqueEntityId(deliverable.id),
+        organizationId,
+      );
+
+      return Result.ok(persisted ?? DeliverableMapper.toResponse(deliverable));
     } catch (error) {
       return Result.fail(
         error instanceof Error ? error : new Error(String(error)),
