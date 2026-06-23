@@ -4,6 +4,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Max,
   Min,
@@ -20,11 +21,12 @@ class EnvironmentVariables {
   @Max(65535)
   PORT = 3000;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(65535)
-  APP_PORT = 3000;
+  APP_PORT?: number;
 
   @IsString()
   @IsNotEmpty()
@@ -56,6 +58,18 @@ class EnvironmentVariables {
   @IsNotEmpty()
   JWT_EXPIRES_IN = '24h';
 
+  @IsOptional()
+  @IsString()
+  CORS_ORIGINS?: string;
+
+  @IsOptional()
+  @IsString()
+  FRONTEND_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  API_PUBLIC_URL?: string;
+
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   DB_SYNCHRONIZE = false;
@@ -67,6 +81,22 @@ class EnvironmentVariables {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   DB_MIGRATIONS_RUN = false;
+
+  @IsOptional()
+  @IsString()
+  AWS_REGION?: string;
+
+  @IsOptional()
+  @IsString()
+  AWS_S3_BUCKET?: string;
+
+  @IsOptional()
+  @IsString()
+  AWS_ACCESS_KEY_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  AWS_SECRET_ACCESS_KEY?: string;
 }
 
 export function validateEnv(

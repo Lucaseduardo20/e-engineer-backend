@@ -7,6 +7,7 @@ import { LoginUseCase } from './login.use-case';
 
 class InMemoryUserRepository implements UserRepository {
   readonly users: User[] = [];
+  readonly roles = new Map<string, string[]>();
 
   save(user: User): Promise<void> {
     const index = this.users.findIndex((item) => item.id === user.id);
@@ -26,8 +27,21 @@ class InMemoryUserRepository implements UserRepository {
     );
   }
 
+  findByIdGlobal(): Promise<User | null> {
+    return Promise.resolve(null);
+  }
+
   findById(): Promise<User | null> {
     return Promise.resolve(null);
+  }
+
+  getMembershipRoles(
+    userId: string,
+    organizationId: OrganizationId,
+  ): Promise<string[]> {
+    return Promise.resolve(
+      this.roles.get(`${userId}:${organizationId.toString()}`) ?? [],
+    );
   }
 
   findByOrganizationId(): Promise<User[]> {
@@ -58,6 +72,7 @@ describe('LoginUseCase', () => {
       name: 'Admin User',
     });
     await userRepository.save(user);
+    userRepository.roles.set(`${user.id}:${organizationId}`, ['owner']);
 
     const result = await useCase.execute({
       email: 'ADMIN@company.com',
@@ -65,16 +80,18 @@ describe('LoginUseCase', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(tokenService.generateToken.mock.calls[0]).toEqual([
-      user.id,
+    expect(tokenService.generateToken.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
       organizationId,
-    ]);
+      roles: ['owner'],
+    });
     expect(result.unwrap()).toMatchObject({
       token: 'signed-token',
       user: {
         id: user.id,
         email: 'admin@company.com',
         fullName: 'Admin User',
+        roles: ['owner'],
         organizationId,
       },
     });

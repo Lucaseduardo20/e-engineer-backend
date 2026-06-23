@@ -11,6 +11,8 @@ export interface UserProps {
   email: Email;
   password: Password;
   name: string;
+  avatarUrl?: string | null;
+  isPlatformAdmin: boolean;
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date | null;
@@ -26,6 +28,7 @@ export class User extends AggregateRoot<UserProps> {
     email: string;
     password: string;
     name: string;
+    avatarUrl?: string | null;
   }): User {
     const name = params.name.trim();
 
@@ -39,6 +42,8 @@ export class User extends AggregateRoot<UserProps> {
       email: Email.create(params.email),
       password: Password.create(params.password),
       name,
+      avatarUrl: normalizeNullableText(params.avatarUrl, 500),
+      isPlatformAdmin: false,
       createdAt: now,
       updatedAt: now,
       lastLoginAt: null,
@@ -68,6 +73,37 @@ export class User extends AggregateRoot<UserProps> {
     this.props.updatedAt = at;
   }
 
+  updateProfile(params: {
+    name?: string;
+    email?: string;
+    avatarUrl?: string | null;
+  }): void {
+    if (params.name !== undefined) {
+      const name = params.name.trim();
+
+      if (!name) {
+        throw new InvalidUserNameError();
+      }
+
+      this.props.name = name;
+    }
+
+    if (params.email !== undefined) {
+      this.props.email = Email.create(params.email);
+    }
+
+    if (params.avatarUrl !== undefined) {
+      this.props.avatarUrl = normalizeNullableText(params.avatarUrl, 500);
+    }
+
+    this.props.updatedAt = new Date();
+  }
+
+  updatePassword(rawPassword: string): void {
+    this.props.password = Password.create(rawPassword);
+    this.props.updatedAt = new Date();
+  }
+
   get id(): string {
     return this.getId().toString();
   }
@@ -88,6 +124,14 @@ export class User extends AggregateRoot<UserProps> {
     return this.props.name;
   }
 
+  get avatarUrl(): string | null {
+    return this.props.avatarUrl ?? null;
+  }
+
+  get isPlatformAdmin(): boolean {
+    return this.props.isPlatformAdmin;
+  }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
@@ -99,4 +143,21 @@ export class User extends AggregateRoot<UserProps> {
   get lastLoginAt(): Date | null | undefined {
     return this.props.lastLoginAt;
   }
+}
+
+function normalizeNullableText(
+  value: string | null | undefined,
+  maxLength: number,
+): string | null {
+  const normalized = value?.trim() ?? '';
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length > maxLength) {
+    throw new Error(`Value must have at most ${maxLength} characters.`);
+  }
+
+  return normalized;
 }

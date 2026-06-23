@@ -35,11 +35,17 @@ export class LoginUseCase {
 
       user.markLoggedIn();
       await this.userRepository.save(user);
-
-      const token = this.tokenService.generateToken(
+      const roles = await this.userRepository.getMembershipRoles(
         user.id,
-        user.organizationId.toString(),
+        user.organizationId,
       );
+
+      const token = this.tokenService.generateToken({
+        userId: user.id,
+        organizationId: user.organizationId.toString(),
+        roles,
+        isPlatformAdmin: user.isPlatformAdmin,
+      });
 
       return Result.ok({
         token,
@@ -47,8 +53,10 @@ export class LoginUseCase {
           id: user.id,
           fullName: user.name,
           email: user.email.toString(),
-          avatarUrl: null,
-          roles: [],
+          avatarUrl: user.avatarUrl,
+          roles,
+          isPlatformAdmin: user.isPlatformAdmin,
+          impersonatedBy: null,
           organizationId: user.organizationId.toString(),
         },
       });

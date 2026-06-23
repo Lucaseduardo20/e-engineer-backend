@@ -34,6 +34,19 @@ function slugify(value: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+function normalizeTechnicalTagSlug(value: string): string {
+  return value
+    .trim()
+    .replace(/\./g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function deliverableTypeFromName(name: string): string {
   const normalized = name
     .normalize('NFD')
@@ -72,18 +85,21 @@ async function seedUsers(query: Query): Promise<void> {
       name: 'Lucas Eduardo',
       email: 'admin@engflow.local',
       role: 'owner',
+      isPlatformAdmin: true,
     },
     {
       id: '6a8ef9d8-3c2d-4e6d-ae62-dbb9d87b1002',
       name: 'Leonardo',
       email: 'leonardo@engflow.local',
       role: 'admin',
+      isPlatformAdmin: false,
     },
     {
       id: '6a8ef9d8-3c2d-4e6d-ae62-dbb9d87b1003',
       name: 'Rafael',
       email: 'rafael@engflow.local',
       role: 'member',
+      isPlatformAdmin: false,
     },
   ];
 
@@ -91,16 +107,24 @@ async function seedUsers(query: Query): Promise<void> {
     await query(
       `
         INSERT INTO users (
-          id, organization_id, email, password, name, created_at, updated_at
+          id, organization_id, email, password, name, is_platform_admin, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, now(), now())
+        VALUES ($1, $2, $3, $4, $5, $6, now(), now())
         ON CONFLICT (email) DO UPDATE SET
           organization_id = EXCLUDED.organization_id,
           password = EXCLUDED.password,
           name = EXCLUDED.name,
+          is_platform_admin = EXCLUDED.is_platform_admin,
           updated_at = now()
       `,
-      [user.id, organizationId, user.email, passwordHash, user.name],
+      [
+        user.id,
+        organizationId,
+        user.email,
+        passwordHash,
+        user.name,
+        user.isPlatformAdmin,
+      ],
     );
 
     await query(
@@ -211,7 +235,7 @@ const projects = [
     name: 'Reforma da Escola Municipal Jardim Primavera',
     projectType: 'reforma escolar',
     client: 'Prefeitura Municipal de Sao Paulo',
-    status: 'in_progress',
+    status: 'completed',
     responsible: 'Lucas Eduardo',
     tags: ['escola', 'reforma', 'prefeitura', 'acessibilidade'],
   },
@@ -221,7 +245,7 @@ const projects = [
     name: 'Construcao da UBS Vila Esperanca',
     projectType: 'unidade de saude',
     client: 'Prefeitura Municipal de Sao Paulo',
-    status: 'in_review',
+    status: 'in_progress',
     responsible: 'Leonardo',
     tags: ['saude', 'UBS', 'obra publica', 'fundacao'],
   },
@@ -388,6 +412,8 @@ async function seedTemplates(query: Query): Promise<void> {
 }
 
 async function seedDocumentsAndReviews(query: Query): Promise<void> {
+  const documentVersionIdsByKey = new Map<string, string>();
+
   const documents = [
     {
       project: projects[0],
@@ -402,13 +428,13 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
     {
       project: projects[0],
       deliverableName: 'Memorial descritivo',
-      title: 'Memorial descritivo',
+      title: 'Memorial Descritivo - Reforma Escolar',
       versions: [['R00', true, 'approved', 'Memorial oficial da reforma.']],
     },
     {
       project: projects[1],
       deliverableName: 'Orcamento',
-      title: 'Orcamento',
+      title: 'Planilha Orcamentaria - UBS Vila Esperanca',
       versions: [
         ['R00', false, 'superseded', 'Planilha preliminar.'],
         ['R01', false, 'in_review', 'Em revisao de quantitativos.'],
@@ -420,7 +446,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
       title: 'Projeto de drenagem',
       versions: [['R00', false, 'in_review', 'Primeira emissao tecnica.']],
     },
-  ] as const;
+  ];
 
   for (const documentData of documents) {
     const deliverableId = uuidFromText(
@@ -451,10 +477,11 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
 
     for (const [index, version] of documentData.versions.entries()) {
       const [revision, isOfficial, status, notes] = version;
+      const revisionCode = String(revision);
       const versionId = uuidFromText(
-        `document-version:${documentId}:${revision}`,
+        `document-version:${documentId}:${revisionCode}`,
       );
-      const fileName = `${slugify(documentData.title)}-${revision.toLowerCase()}.pdf`;
+      const fileName = `${slugify(documentData.title)}-${revisionCode.toLowerCase()}.pdf`;
 
       await query(
         `
@@ -477,7 +504,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
           versionId,
           organizationId,
           documentId,
-          revision,
+          revisionCode,
           fileName,
           `/fake-storage/projects/${documentData.project.id}/${fileName}`,
           index % 2 === 0 ? 'Lucas Eduardo' : 'Leonardo',
@@ -487,6 +514,13 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
           notes,
         ],
       );
+
+      const reviewLookupKey = [
+        documentData.project.id,
+        documentData.deliverableName,
+        revisionCode,
+      ].join('|');
+      documentVersionIdsByKey.set(reviewLookupKey, versionId);
     }
   }
 
@@ -508,7 +542,7 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
       id: 'orcamento-r01',
       project: projects[1],
       deliverable: 'Orcamento',
-      document: 'Orcamento',
+      document: 'Planilha Orcamentaria - UBS Vila Esperanca',
       revision: 'R01',
       status: 'rejected',
       requestedBy: 'Lucas Eduardo',
@@ -546,12 +580,18 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
     const deliverableId = uuidFromText(
       `deliverable:${review.project.id}:${review.deliverable}`,
     );
-    const documentId = uuidFromText(
-      `document:${review.project.id}:${review.document}`,
-    );
-    const versionId = uuidFromText(
-      `document-version:${documentId}:${review.revision}`,
-    );
+    const versionLookupKey = [
+      review.project.id,
+      review.deliverable,
+      review.revision,
+    ].join('|');
+    const versionId = documentVersionIdsByKey.get(versionLookupKey);
+
+    if (!versionId) {
+      throw new Error(
+        `Seed review "${review.id}" references missing document version (${versionLookupKey}).`,
+      );
+    }
 
     await query(
       `
@@ -578,6 +618,395 @@ async function seedDocumentsAndReviews(query: Query): Promise<void> {
         review.reviewedBy,
         daysFromNow(review.dueInDays),
         review.comment,
+      ],
+    );
+  }
+}
+
+
+
+type SeedKnowledgeItem = {
+  key: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  tags: string[];
+  content: Record<string, unknown>;
+  publishedAt?: Date | null;
+  archivedAt?: Date | null;
+  deprecatedAt?: Date | null;
+};
+
+async function seedKnowledgeBase(query: Query): Promise<void> {
+  const author = 'Lucas Eduardo';
+  const reviewer = 'Leonardo';
+  const now = new Date();
+
+  const items: SeedKnowledgeItem[] = [
+    {
+      key: 'kb:technical-standard:nomenclatura-arquivos',
+      title: 'Padrao de nomenclatura de arquivos tecnicos',
+      description: 'Define o padrao de nomes para arquivos PDF, DWG e planilhas por disciplina e revisao.',
+      type: 'technical_standard',
+      status: 'published',
+      tags: ['padrao-tecnico', 'nomenclatura', 'documentacao', 'prefeitura-sp'],
+      content: {
+        objective: 'Padronizar nomes para evitar versoes duplicadas e perda de rastreabilidade.',
+        convention: 'DISCIPLINA_TIPO_PROJETO_CLIENTE_REVISAO_DATA',
+        examples: ['ARQ_UBS_VILA_ESPERANCA_R02_2026-03-10', 'HID_REFORMA_ESCOLA_JP_R01_2026-02-20'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:technical-standard:organizacao-disciplinas-ubs',
+      title: 'Organizacao de disciplinas em projetos de UBS',
+      description: 'Orienta a sequencia de compatibilizacao entre arquitetura, estrutural, eletrico e hidraulico.',
+      type: 'technical_standard',
+      status: 'published',
+      tags: ['ubs', 'compatibilizacao', 'arquitetura', 'hidraulica'],
+      content: {
+        sequence: ['arquitetura', 'estrutural', 'hidraulica', 'eletrica'],
+        qualityGate: 'Revisao cruzada obrigatoria antes da emissao oficial.',
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:document-model:memorial-reforma-escolar',
+      title: 'Memorial descritivo para reforma escolar',
+      description: 'Modelo base de memorial descritivo para reformas em unidades escolares municipais.',
+      type: 'document_model',
+      status: 'published',
+      tags: ['memorial', 'reforma', 'escola', 'prefeitura'],
+      content: {
+        sections: ['escopo', 'diagnostico', 'solucoes tecnicas', 'materiais', 'acessibilidade'],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:document-model:relatorio-fotografico-vistoria',
+      title: 'Relatorio fotografico de vistoria inicial',
+      description: 'Estrutura recomendada para registro de vistoria inicial com fotos antes/depois.',
+      type: 'document_model',
+      status: 'draft',
+      tags: ['relatorio-fotografico', 'vistoria', 'levantamento'],
+      content: {
+        requiredFields: ['local', 'data', 'responsavel', 'contexto', 'evidencias'],
+      },
+      publishedAt: null,
+    },
+    {
+      key: 'kb:project-reference:ubs-vila-esperanca',
+      title: 'Construcao da UBS Vila Esperanca',
+      description: 'Projeto de referencia para novas UBS com foco em padrao de compatibilizacao e entrega.',
+      type: 'project_reference',
+      status: 'published',
+      tags: ['ubs', 'saude', 'projeto-referencia'],
+      content: {
+        summary: 'Referencia criada a partir de projeto real de UBS.',
+        sections: [
+          {
+            title: 'Motivo da promocao',
+            body: 'Projeto com bom nivel de rastreabilidade e compatibilizacao entre disciplinas.',
+          },
+          {
+            title: 'Quando usar esta referencia',
+            body: 'Usar em novos projetos de UBS com escopo semelhante.',
+          },
+          {
+            title: 'Alertas e observacoes',
+            body: 'Revisar compatibilizacao e conferencias de quantitativos antes da entrega.',
+          },
+        ],
+        metadata: {
+          source: 'project',
+          sourceProjectId: projects[1].id,
+          sourceProjectName: 'Construcao da UBS Vila Esperanca',
+          sourceProjectType: 'unidade de saude',
+        },
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:project-reference:escola-jardim-primavera',
+      title: 'Reforma da Escola Municipal Jardim Primavera',
+      description: 'Referencia para projetos de reforma escolar com exigencias de acessibilidade.',
+      type: 'project_reference',
+      status: 'published',
+      tags: ['escola', 'reforma', 'acessibilidade', 'projeto-referencia'],
+      content: {
+        summary: 'Referencia criada a partir de projeto real de reforma escolar.',
+        sections: [
+          {
+            title: 'Motivo da promocao',
+            body: 'Projeto bem estruturado, com memorial consistente e fluxo de revisao rastreavel.',
+          },
+          {
+            title: 'Quando usar esta referencia',
+            body: 'Usar como base em reformas escolares com foco em acessibilidade.',
+          },
+          {
+            title: 'Alertas e observacoes',
+            body: 'Validar cobertura e compatibilidade entre memorial e orcamento.',
+          },
+        ],
+        metadata: {
+          source: 'project',
+          sourceProjectId: projects[0].id,
+          sourceProjectName: 'Reforma da Escola Municipal Jardim Primavera',
+          sourceProjectType: 'reforma escolar',
+        },
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      title: 'Divergencia de quantitativos em orcamento de UBS',
+      description: 'Licao aprendida: validar quantitativos com arquitetura antes do fechamento do orcamento.',
+      type: 'lesson_learned',
+      status: 'published',
+      tags: ['orcamento', 'ubs', 'quantitativos', 'licao-aprendida'],
+      content: {
+        summary: 'Licao aprendida registrada a partir de revisao reprovada.',
+        sections: [
+          {
+            title: 'Contexto',
+            body: 'Durante a revisao do orcamento da UBS Vila Esperanca.',
+          },
+          {
+            title: 'Problema identificado',
+            body: 'Quantitativos de piso e revestimento nao batiam com memorial.',
+          },
+          {
+            title: 'Impacto',
+            body: 'Reprovacao da revisao e atraso na entrega.',
+          },
+          {
+            title: 'Recomendacao',
+            body: 'Comparar quantitativos principais com memorial e pranchas antes do envio.',
+          },
+          {
+            title: 'Quando observar novamente',
+            body: 'Projetos de UBS e reformas com orcamento por ambiente.',
+          },
+        ],
+        metadata: {
+          source: 'review',
+          sourceReviewId: uuidFromText('review:orcamento-r01'),
+          sourceReviewStatus: 'rejected',
+          sourceProjectId: projects[1].id,
+          sourceProjectName: 'Construcao da UBS Vila Esperanca',
+          sourceDeliverableName: 'Orcamento',
+          sourceDocumentTitle: 'Planilha Orcamentaria - UBS Vila Esperanca',
+        },
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:lesson-learned:compatibilizacao-tardia-arq-hid',
+      title: 'Compatibilizacao tardia entre arquitetura e hidraulica',
+      description: 'Aprendizado sobre antecipar compatibilizacao para reduzir retrabalho em fase de revisao.',
+      type: 'lesson_learned',
+      status: 'deprecated',
+      tags: ['compatibilizacao', 'arquitetura', 'hidraulica', 'retrabalho'],
+      content: {
+        note: 'Processo antigo depreciado apos adocao de gate de compatibilizacao inicial.',
+      },
+      publishedAt: now,
+      deprecatedAt: now,
+    },
+    {
+      key: 'kb:review-checklist:revisao-orcamento',
+      title: 'Revisao de orcamento antes de envio ao cliente',
+      description: 'Checklist de revisao tecnica e financeira para evitar inconsistencias no envio.',
+      type: 'review_checklist',
+      status: 'published',
+      tags: ['checklist', 'revisao', 'orcamento'],
+      content: {
+        summary: 'Checklist para revisar orcamento antes de envio ao cliente.',
+        sections: [
+          {
+            title: 'Quando usar',
+            body: 'Usar antes de enviar orcamento para revisao tecnica, cliente ou prefeitura.',
+          },
+          {
+            title: 'Etapa indicada',
+            body: 'Pre-entrega do orcamento e revisao final de quantitativos.',
+          },
+        ],
+        checklist: [
+          { label: 'Conferir quantitativos principais.', required: true },
+          { label: 'Comparar orcamento com memorial descritivo.', required: true },
+          { label: 'Validar unidades de medida.', required: true },
+          { label: 'Conferir itens sem preco ou com preco zerado.', required: true },
+          { label: 'Validar data-base e BDI.', required: true },
+        ],
+      },
+      publishedAt: now,
+    },
+    {
+      key: 'kb:delivery-standard:pacote-tecnico-prefeitura',
+      title: 'Pacote tecnico para prefeitura',
+      description: 'Padrao de entrega final para prefeituras com estrutura de pastas e documentos obrigatorios.',
+      type: 'delivery_standard',
+      status: 'archived',
+      tags: ['entrega', 'prefeitura', 'pacote-final'],
+      content: {
+        summary: 'Padrao para organizar pacote tecnico antes de envio para prefeitura.',
+        sections: [
+          {
+            title: 'Padrao de entrega',
+            body: 'Pacote tecnico com documentos finais, memoriais, orcamento e cronograma.',
+          },
+          {
+            title: 'Formato de envio',
+            body: 'Arquivos finais em PDF com nomenclatura padronizada e revisao identificada.',
+          },
+          {
+            title: 'Conferencias antes da entrega',
+            body: 'Confirmar versoes oficiais e ausencia de revisoes pendentes.',
+          },
+        ],
+        checklist: [
+          { label: 'Confirmar versao oficial dos documentos.', required: true },
+          { label: 'Conferir nomenclatura dos arquivos.', required: true },
+          { label: 'Verificar ART/RRT.', required: true },
+          { label: 'Conferir pendencias de revisao.', required: true },
+        ],
+      },
+      publishedAt: now,
+      archivedAt: now,
+    },
+  ];
+
+  for (const item of items) {
+    await query(
+      `
+        INSERT INTO knowledge_items (
+          id, organization_id, title, description, type, status, visibility,
+          content, tags, created_by, updated_by, published_at, archived_at, deprecated_at,
+          created_at, updated_at
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7,
+          $8::jsonb, $9::jsonb, $10, $11, $12, $13, $14,
+          now(), now()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          type = EXCLUDED.type,
+          status = EXCLUDED.status,
+          visibility = EXCLUDED.visibility,
+          content = EXCLUDED.content,
+          tags = EXCLUDED.tags,
+          created_by = EXCLUDED.created_by,
+          updated_by = EXCLUDED.updated_by,
+          published_at = EXCLUDED.published_at,
+          archived_at = EXCLUDED.archived_at,
+          deprecated_at = EXCLUDED.deprecated_at,
+          updated_at = now()
+      `,
+      [
+        uuidFromText(item.key),
+        organizationId,
+        item.title,
+        item.description,
+        item.type,
+        item.status,
+        'organization',
+        JSON.stringify(item.content),
+        JSON.stringify(item.tags),
+        author,
+        reviewer,
+        item.publishedAt ?? null,
+        item.archivedAt ?? null,
+        item.deprecatedAt ?? null,
+      ],
+    );
+  }
+}
+
+async function seedKnowledgeRelations(query: Query): Promise<void> {
+  const relations = [
+    {
+      key: 'kb-rel:project-ref-escola-based-on-project',
+      knowledgeKey: 'kb:project-reference:escola-jardim-primavera',
+      relationType: 'based_on',
+      targetType: 'project',
+      targetId: projects[0].id,
+    },
+    {
+      key: 'kb-rel:project-ref-ubs-based-on-project',
+      knowledgeKey: 'kb:project-reference:ubs-vila-esperanca',
+      relationType: 'based_on',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:document-model-memorial-based-on-document',
+      knowledgeKey: 'kb:document-model:memorial-reforma-escolar',
+      relationType: 'based_on',
+      targetType: 'document',
+      targetId: uuidFromText(`document:${projects[0].id}:Memorial Descritivo - Reforma Escolar`),
+    },
+    {
+      key: 'kb-rel:lesson-from-review-orcamento-r01',
+      knowledgeKey: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      relationType: 'lesson_from',
+      targetType: 'review',
+      targetId: uuidFromText('review:orcamento-r01'),
+    },
+    {
+      key: 'kb-rel:lesson-from-project-ubs',
+      knowledgeKey: 'kb:lesson-learned:divergencia-quantitativos-ubs',
+      relationType: 'lesson_from',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:checklist-for-project-ubs',
+      knowledgeKey: 'kb:review-checklist:revisao-orcamento',
+      relationType: 'checklist_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:standard-for-project-ubs',
+      knowledgeKey: 'kb:technical-standard:organizacao-disciplinas-ubs',
+      relationType: 'standard_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+    {
+      key: 'kb-rel:delivery-standard-for-project-ubs',
+      knowledgeKey: 'kb:delivery-standard:pacote-tecnico-prefeitura',
+      relationType: 'standard_for',
+      targetType: 'project',
+      targetId: projects[1].id,
+    },
+  ];
+
+  for (const relation of relations) {
+    await query(
+      `
+        INSERT INTO knowledge_relations (
+          id, organization_id, knowledge_item_id, target_type, target_id, relation_type, created_by, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+        ON CONFLICT (id) DO UPDATE SET
+          target_type = EXCLUDED.target_type,
+          target_id = EXCLUDED.target_id,
+          relation_type = EXCLUDED.relation_type
+      `,
+      [
+        uuidFromText(relation.key),
+        organizationId,
+        uuidFromText(relation.knowledgeKey),
+        relation.targetType,
+        relation.targetId,
+        relation.relationType,
+        'Lucas Eduardo',
       ],
     );
   }
@@ -610,7 +1039,7 @@ async function seedActivityLog(query: Query): Promise<void> {
     ['Rafael', 'review.requested', 'review', null, 'Revisao solicitada'],
     ['Lucas Eduardo', 'review.approved', 'review', null, 'Revisao aprovada'],
     ['Rafael', 'review.rejected', 'review', null, 'Revisao reprovada'],
-  ] as const;
+  ];
 
   for (const [index, activity] of activities.entries()) {
     const [actorName, action, entityType, entityId, description] = activity;
@@ -646,6 +1075,268 @@ async function seedActivityLog(query: Query): Promise<void> {
   }
 }
 
+async function seedTechnicalTags(query: Query): Promise<void> {
+  const creator = 'admin@engflow.local';
+  const seedByCategory: Array<{ category: string; names: string[] }> = [
+    { category: 'project_type', names: ['UBS', 'Reforma escolar', 'Praca publica', 'Pavimentacao', 'Drenagem', 'Obra publica'] },
+    { category: 'technical_discipline', names: ['Arquitetura', 'Estrutura', 'Hidraulica', 'Eletrica', 'Orcamento', 'Cronograma', 'Acessibilidade'] },
+    { category: 'document_type', names: ['Memorial descritivo', 'Relatorio fotografico', 'Planilha orcamentaria', 'Cronograma fisico-financeiro', 'ART/RRT', 'Prancha tecnica'] },
+    { category: 'operational_pain', names: ['Retrabalho', 'Revisao reprovada', 'Quantitativos divergentes', 'Nomenclatura incorreta', 'Falta de compatibilizacao', 'Documento incompleto', 'Versao errada'] },
+    { category: 'client_context', names: ['Prefeitura SP', 'Orgao publico', 'Licitacao', 'Contrato publico', 'Zeladoria urbana'] },
+    { category: 'project_stage', names: ['Levantamento', 'Projeto basico', 'Projeto executivo', 'Revisao', 'Entrega final', 'Pos-entrega'] },
+    { category: 'knowledge_purpose', names: ['Padrao tecnico', 'Documento modelo', 'Projeto de referencia', 'Licao aprendida', 'Checklist de revisao', 'Padrao de entrega'] },
+  ];
+
+  for (const group of seedByCategory) {
+    for (const name of group.names) {
+      const slug = normalizeTechnicalTagSlug(name);
+      await query(
+        `
+          INSERT INTO technical_tags (
+            id, organization_id, name, slug, category, description, status, created_by, updated_by, created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $7, now(), now())
+          ON CONFLICT (organization_id, slug) DO UPDATE SET
+            name = EXCLUDED.name,
+            category = EXCLUDED.category,
+            updated_by = EXCLUDED.updated_by,
+            updated_at = now()
+        `,
+        [
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          organizationId,
+          name,
+          slug,
+          group.category,
+          null,
+          creator,
+        ],
+      );
+    }
+  }
+}
+
+async function seedProjectTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const projectTags = new Map<string, string[]>([
+    [
+      projects[0].id,
+      ['Reforma escolar', 'Prefeitura SP', 'Acessibilidade', 'Projeto executivo'],
+    ],
+    [
+      projects[1].id,
+      ['UBS', 'Prefeitura SP', 'Orgao publico', 'Obra publica', 'Projeto basico', 'Orcamento', 'Projeto executivo'],
+    ],
+    [
+      projects[2].id,
+      ['Praca publica', 'Zeladoria urbana', 'Orcamento', 'Projeto basico'],
+    ],
+    [
+      projects[3].id,
+      ['Pavimentacao', 'Drenagem', 'Orgao publico', 'Planilha orcamentaria'],
+    ],
+    [
+      projects[4].id,
+      ['Drenagem', 'Orgao publico', 'Projeto executivo', 'Revisao'],
+    ],
+  ]);
+
+  for (const [projectId, tagNames] of projectTags.entries()) {
+    const uniqueTagNames = [...new Set(tagNames)];
+
+    for (const tagName of uniqueTagNames) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO project_tags (
+            id, organization_id, project_id, tag_id, source, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, 'manual', $5, now())
+          ON CONFLICT (organization_id, project_id, tag_id) DO UPDATE SET
+            source = EXCLUDED.source
+        `,
+        [
+          uuidFromText(`project-tag:${organizationId}:${projectId}:${slug}`),
+          organizationId,
+          projectId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
+async function seedKnowledgeItemTechnicalTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const knowledgeTags = new Map<string, string[]>([
+    [
+      'kb:technical-standard:nomenclatura-arquivos',
+      ['Padrao tecnico', 'Documento modelo', 'Prefeitura SP', 'Nomenclatura incorreta'],
+    ],
+    [
+      'kb:technical-standard:organizacao-disciplinas-ubs',
+      ['UBS', 'Arquitetura', 'Hidraulica', 'Eletrica', 'Projeto executivo', 'Falta de compatibilizacao'],
+    ],
+    [
+      'kb:document-model:memorial-reforma-escolar',
+      ['Reforma escolar', 'Memorial descritivo', 'Documento modelo', 'Prefeitura SP', 'Acessibilidade'],
+    ],
+    [
+      'kb:document-model:relatorio-fotografico-vistoria',
+      ['Relatorio fotografico', 'Levantamento', 'Documento modelo'],
+    ],
+    [
+      'kb:project-reference:ubs-vila-esperanca',
+      ['UBS', 'Prefeitura SP', 'Orgao publico', 'Obra publica', 'Projeto de referencia', 'Projeto executivo'],
+    ],
+    [
+      'kb:project-reference:escola-jardim-primavera',
+      ['Reforma escolar', 'Prefeitura SP', 'Acessibilidade', 'Projeto de referencia'],
+    ],
+    [
+      'kb:lesson-learned:divergencia-quantitativos-ubs',
+      ['UBS', 'Orcamento', 'Quantitativos divergentes', 'Licao aprendida', 'Revisao reprovada'],
+    ],
+    [
+      'kb:lesson-learned:compatibilizacao-tardia-arq-hid',
+      ['Arquitetura', 'Hidraulica', 'Falta de compatibilizacao', 'Retrabalho', 'Licao aprendida'],
+    ],
+    [
+      'kb:review-checklist:revisao-orcamento',
+      ['Orcamento', 'Checklist de revisao', 'Quantitativos divergentes', 'Prefeitura SP'],
+    ],
+    [
+      'kb:delivery-standard:pacote-tecnico-prefeitura',
+      ['Padrao de entrega', 'Prefeitura SP', 'Entrega final', 'ART/RRT'],
+    ],
+  ]);
+
+  for (const [knowledgeKey, tagNames] of knowledgeTags.entries()) {
+    const knowledgeItemId = uuidFromText(knowledgeKey);
+
+    for (const tagName of [...new Set(tagNames)]) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO knowledge_item_tags (
+            id, organization_id, knowledge_item_id, tag_id, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, now())
+          ON CONFLICT (organization_id, knowledge_item_id, tag_id) DO UPDATE SET
+            created_by = EXCLUDED.created_by
+        `,
+        [
+          uuidFromText(`knowledge-item-tag:${organizationId}:${knowledgeItemId}:${slug}`),
+          organizationId,
+          knowledgeItemId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
+async function seedDeliverableTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const deliverableTagsByName = new Map<string, string[]>([
+    ['Projeto arquitetonico', ['Arquitetura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto estrutural', ['Estrutura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto eletrico', ['Eletrica', 'Prancha tecnica', 'Projeto executivo']],
+    ['Projeto hidraulico', ['Hidraulica', 'Prancha tecnica', 'Falta de compatibilizacao']],
+    ['Memorial descritivo', ['Memorial descritivo', 'Documento modelo', 'Prefeitura SP']],
+    ['Orcamento', ['Orcamento', 'Planilha orcamentaria', 'Quantitativos divergentes']],
+    ['Cronograma fisico-financeiro', ['Cronograma', 'Cronograma fisico-financeiro', 'Entrega final']],
+    ['Relatorio fotografico', ['Relatorio fotografico', 'Levantamento', 'Documento incompleto']],
+    ['Projeto de drenagem', ['Drenagem', 'Projeto executivo', 'Orgao publico']],
+    ['Projeto de pavimentacao', ['Pavimentacao', 'Projeto executivo', 'Orgao publico']],
+    ['Projeto paisagistico', ['Praca publica', 'Projeto basico', 'Zeladoria urbana']],
+    ['Projeto de iluminacao', ['Eletrica', 'Praca publica', 'Zeladoria urbana']],
+  ]);
+
+  for (const project of projects) {
+    const template = templates.find((item) => item.id === project.templateId);
+    if (!template) continue;
+
+    for (const deliverableName of template.deliverables) {
+      const deliverableId = uuidFromText(
+        `deliverable:${project.id}:${deliverableName}`,
+      );
+      const tagNames =
+        deliverableTagsByName.get(deliverableName) ??
+        [deliverableTypeFromName(deliverableName) === 'technical_report' ? 'Projeto executivo' : 'Prancha tecnica'];
+
+      for (const tagName of [...new Set(tagNames)]) {
+        const slug = normalizeTechnicalTagSlug(tagName);
+        await query(
+          `
+            INSERT INTO deliverable_tags (
+              id, organization_id, deliverable_id, tag_id, source, created_by, created_at
+            )
+            VALUES ($1, $2, $3, $4, 'manual', $5, now())
+            ON CONFLICT (organization_id, deliverable_id, tag_id) DO UPDATE SET
+              source = EXCLUDED.source
+          `,
+          [
+            uuidFromText(
+              `deliverable-tag:${organizationId}:${deliverableId}:${slug}`,
+            ),
+            organizationId,
+            deliverableId,
+            uuidFromText(`technical-tag:${organizationId}:${slug}`),
+            actor,
+          ],
+        );
+      }
+    }
+  }
+}
+
+async function seedDocumentTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const documentTags = new Map<string, string[]>([
+    ['Projeto arquitetonico', ['Arquitetura', 'Prancha tecnica', 'Projeto executivo']],
+    ['Memorial Descritivo - Reforma Escolar', ['Memorial descritivo', 'Documento modelo', 'Prefeitura SP']],
+    ['Planilha Orcamentaria - UBS Vila Esperanca', ['Orcamento', 'Planilha orcamentaria', 'Quantitativos divergentes']],
+    ['Projeto de drenagem', ['Drenagem', 'Projeto executivo', 'Orgao publico']],
+  ]);
+
+  const seededDocuments = [
+    { project: projects[0], title: 'Projeto arquitetonico' },
+    { project: projects[0], title: 'Memorial Descritivo - Reforma Escolar' },
+    { project: projects[1], title: 'Planilha Orcamentaria - UBS Vila Esperanca' },
+    { project: projects[3], title: 'Projeto de drenagem' },
+  ];
+
+  for (const document of seededDocuments) {
+    const documentId = uuidFromText(
+      `document:${document.project.id}:${document.title}`,
+    );
+
+    for (const tagName of [...new Set(documentTags.get(document.title) ?? [])]) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO document_tags (
+            id, organization_id, document_id, tag_id, source, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, 'manual', $5, now())
+          ON CONFLICT (organization_id, document_id, tag_id) DO UPDATE SET
+            source = EXCLUDED.source
+        `,
+        [
+          uuidFromText(`document-tag:${organizationId}:${documentId}:${slug}`),
+          organizationId,
+          documentId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await dataSource.initialize();
 
@@ -658,6 +1349,13 @@ async function main(): Promise<void> {
       await seedTemplates(query);
       await seedProjectsAndDeliverables(query);
       await seedDocumentsAndReviews(query);
+      await seedKnowledgeBase(query);
+      await seedKnowledgeRelations(query);
+      await seedTechnicalTags(query);
+      await seedProjectTags(query);
+      await seedKnowledgeItemTechnicalTags(query);
+      await seedDeliverableTags(query);
+      await seedDocumentTags(query);
       await seedActivityLog(query);
     });
 

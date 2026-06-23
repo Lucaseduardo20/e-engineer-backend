@@ -19,8 +19,16 @@ class InMemoryUserRepository implements UserRepository {
     );
   }
 
+  findByIdGlobal(): Promise<User | null> {
+    return Promise.resolve(null);
+  }
+
   findById(): Promise<User | null> {
     return Promise.resolve(null);
+  }
+
+  getMembershipRoles(): Promise<string[]> {
+    return Promise.resolve([]);
   }
 
   findByOrganizationId(): Promise<User[]> {

@@ -6,17 +6,23 @@ import { DeliverableRepository } from '../../domain/repositories/deliverable.rep
 import { DeliverableStatus } from '../../domain/value-objects/deliverable-status.value-object';
 import { DeliverableType } from '../../domain/value-objects/deliverable-type.value-object';
 import { CreateDeliverableUseCase } from './create-deliverable.use-case';
+import { DeleteDeliverableUseCase } from './delete-deliverable.use-case';
 import { GetDeliverableUseCase } from './get-deliverable.use-case';
 import { ListDeliverablesUseCase } from './list-deliverables.use-case';
+import { MarkDeliverableInheritanceReviewedUseCase } from './mark-deliverable-inheritance-reviewed.use-case';
 import { UpdateDeliverableUseCase } from './update-deliverable.use-case';
 
 function createRepository(): jest.Mocked<DeliverableRepository> {
   return {
     findById: jest.fn(),
     getById: jest.fn(),
+    ensureSelectableTags: jest.fn(),
     list: jest.fn(),
+    markInheritanceReviewed: jest.fn(),
     projectExists: jest.fn(),
     save: jest.fn(),
+    syncTags: jest.fn(),
+    delete: jest.fn(),
   };
 }
 
@@ -50,6 +56,57 @@ describe('Deliverables use cases', () => {
       status: 'todo',
       assignees: ['Lucas Eduardo'],
     });
+  });
+
+  it('validates and syncs governed tags when creating a deliverable', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    const useCase = new CreateDeliverableUseCase(repository);
+    const organizationId = randomUUID();
+    const projectId = randomUUID();
+    const tagId = randomUUID();
+
+    const result = await useCase.execute({
+      organizationId,
+      projectId,
+      title: 'Orcamento',
+      type: 'budget',
+      tagIds: [tagId, tagId],
+      createdBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.ensureSelectableTags).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      tagIds: [tagId, tagId],
+    });
+    expect(repository.syncTags).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: OrganizationId.create(organizationId),
+        tagIds: [tagId, tagId],
+        actorId: 'coord-1',
+      }),
+    );
+  });
+
+  it('does not create a deliverable when tag validation fails', async () => {
+    const repository = createRepository();
+    repository.projectExists.mockResolvedValue(true);
+    repository.ensureSelectableTags.mockRejectedValue(
+      new Error('Technical tag not found for this organization.'),
+    );
+    const useCase = new CreateDeliverableUseCase(repository);
+
+    const result = await useCase.execute({
+      organizationId: randomUUID(),
+      projectId: randomUUID(),
+      title: 'Orcamento',
+      type: 'budget',
+      tagIds: [randomUUID()],
+    });
+
+    expect(result.isFail()).toBe(true);
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('rejects creation when the project is outside the tenant scope', async () => {
@@ -137,6 +194,59 @@ describe('Deliverables use cases', () => {
     expect(result.unwrap()).toMatchObject({
       status: 'done',
       assignees: ['Leonardo'],
+    });
+  });
+
+  it('marks an inherited deliverable as reviewed', async () => {
+    const repository = createRepository();
+    const organizationId = randomUUID();
+    const deliverableId = randomUUID();
+    repository.markInheritanceReviewed.mockResolvedValue({
+      id: deliverableId,
+      projectId: randomUUID(),
+      title: 'Orcamento',
+      status: 'todo',
+      type: 'budget',
+      assignees: [],
+      inheritanceReview: {
+        relationId: randomUUID(),
+        baseProjectId: randomUUID(),
+        baseDeliverableId: randomUUID(),
+        needsReviewAfterInheritance: false,
+        reviewedBy: 'coord-1',
+        reviewedAt: '2026-06-16T12:00:00.000Z',
+      },
+    });
+    const useCase = new MarkDeliverableInheritanceReviewedUseCase(repository);
+
+    const result = await useCase.execute({
+      organizationId,
+      deliverableId,
+      reviewedBy: 'coord-1',
+    });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.markInheritanceReviewed).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      deliverableId: new UniqueEntityId(deliverableId),
+      reviewedBy: 'coord-1',
+    });
+    expect(result.unwrap().inheritanceReview?.needsReviewAfterInheritance).toBe(false);
+  });
+
+  it('removes a deliverable using tenant scope', async () => {
+    const repository = createRepository();
+    repository.delete.mockResolvedValue(true);
+    const useCase = new DeleteDeliverableUseCase(repository);
+    const organizationId = randomUUID();
+    const deliverableId = randomUUID();
+
+    const result = await useCase.execute({ organizationId, deliverableId });
+
+    expect(result.isOk()).toBe(true);
+    expect(repository.delete).toHaveBeenCalledWith({
+      organizationId: OrganizationId.create(organizationId),
+      deliverableId: new UniqueEntityId(deliverableId),
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import {
@@ -49,4 +50,10 @@ export class UpdateDeliverableDto {
   @IsString({ each: true })
   @MaxLength(120, { each: true })
   assignees?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(24)
+  @IsUUID(undefined, { each: true })
+  tagIds?: string[];
 }
