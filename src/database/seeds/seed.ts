@@ -1125,7 +1125,7 @@ async function seedProjectTags(query: Query): Promise<void> {
     ],
     [
       projects[1].id,
-      ['UBS', 'Prefeitura SP', 'Obra publica', 'Orcamento', 'Projeto executivo'],
+      ['UBS', 'Prefeitura SP', 'Orgao publico', 'Obra publica', 'Projeto basico', 'Orcamento', 'Projeto executivo'],
     ],
     [
       projects[2].id,
@@ -1159,6 +1159,77 @@ async function seedProjectTags(query: Query): Promise<void> {
           uuidFromText(`project-tag:${organizationId}:${projectId}:${slug}`),
           organizationId,
           projectId,
+          uuidFromText(`technical-tag:${organizationId}:${slug}`),
+          actor,
+        ],
+      );
+    }
+  }
+}
+
+async function seedKnowledgeItemTechnicalTags(query: Query): Promise<void> {
+  const actor = 'admin@engflow.local';
+  const knowledgeTags = new Map<string, string[]>([
+    [
+      'kb:technical-standard:nomenclatura-arquivos',
+      ['Padrao tecnico', 'Documento modelo', 'Prefeitura SP', 'Nomenclatura incorreta'],
+    ],
+    [
+      'kb:technical-standard:organizacao-disciplinas-ubs',
+      ['UBS', 'Arquitetura', 'Hidraulica', 'Eletrica', 'Projeto executivo', 'Falta de compatibilizacao'],
+    ],
+    [
+      'kb:document-model:memorial-reforma-escolar',
+      ['Reforma escolar', 'Memorial descritivo', 'Documento modelo', 'Prefeitura SP', 'Acessibilidade'],
+    ],
+    [
+      'kb:document-model:relatorio-fotografico-vistoria',
+      ['Relatorio fotografico', 'Levantamento', 'Documento modelo'],
+    ],
+    [
+      'kb:project-reference:ubs-vila-esperanca',
+      ['UBS', 'Prefeitura SP', 'Orgao publico', 'Obra publica', 'Projeto de referencia', 'Projeto executivo'],
+    ],
+    [
+      'kb:project-reference:escola-jardim-primavera',
+      ['Reforma escolar', 'Prefeitura SP', 'Acessibilidade', 'Projeto de referencia'],
+    ],
+    [
+      'kb:lesson-learned:divergencia-quantitativos-ubs',
+      ['UBS', 'Orcamento', 'Quantitativos divergentes', 'Licao aprendida', 'Revisao reprovada'],
+    ],
+    [
+      'kb:lesson-learned:compatibilizacao-tardia-arq-hid',
+      ['Arquitetura', 'Hidraulica', 'Falta de compatibilizacao', 'Retrabalho', 'Licao aprendida'],
+    ],
+    [
+      'kb:review-checklist:revisao-orcamento',
+      ['Orcamento', 'Checklist de revisao', 'Quantitativos divergentes', 'Prefeitura SP'],
+    ],
+    [
+      'kb:delivery-standard:pacote-tecnico-prefeitura',
+      ['Padrao de entrega', 'Prefeitura SP', 'Entrega final', 'ART/RRT'],
+    ],
+  ]);
+
+  for (const [knowledgeKey, tagNames] of knowledgeTags.entries()) {
+    const knowledgeItemId = uuidFromText(knowledgeKey);
+
+    for (const tagName of [...new Set(tagNames)]) {
+      const slug = normalizeTechnicalTagSlug(tagName);
+      await query(
+        `
+          INSERT INTO knowledge_item_tags (
+            id, organization_id, knowledge_item_id, tag_id, created_by, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, now())
+          ON CONFLICT (organization_id, knowledge_item_id, tag_id) DO UPDATE SET
+            created_by = EXCLUDED.created_by
+        `,
+        [
+          uuidFromText(`knowledge-item-tag:${organizationId}:${knowledgeItemId}:${slug}`),
+          organizationId,
+          knowledgeItemId,
           uuidFromText(`technical-tag:${organizationId}:${slug}`),
           actor,
         ],
@@ -1282,6 +1353,7 @@ async function main(): Promise<void> {
       await seedKnowledgeRelations(query);
       await seedTechnicalTags(query);
       await seedProjectTags(query);
+      await seedKnowledgeItemTechnicalTags(query);
       await seedDeliverableTags(query);
       await seedDocumentTags(query);
       await seedActivityLog(query);
